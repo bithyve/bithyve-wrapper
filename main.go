@@ -68,7 +68,7 @@ func Send(w http.ResponseWriter, x interface{}) {
 
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
-	body := "http://localhost:443/address/" + addr
+	body := "http://35.229.68.185:443/address/" + addr
 	data, err := Get(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -125,7 +125,7 @@ type Tx struct {
 
 func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, error) {
 	var x []Tx
-	body := "http://localhost:443/address/" + addr + "/txs"
+	body := "http://35.229.68.185:443/address/" + addr + "/txs"
 	log.Println(body)
 	data, err := Get(body)
 	if err != nil {
@@ -140,44 +140,69 @@ func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, e
 	}
 
 	return x, nil
+}
+
+type UtxoVout struct {
+	Scriptpubkey         string  `json:"scriptpubkey"`
+	Scriptpubkey_asm     string  `json:"scriptpubkey_asm"`
+	Scriptpubkey_address string  `json:"scriptpubkey_address"`
+	Scriptpubkey_type    string  `json:"scriptpubkey_type"`
+	Value                float64 `json:"value"`
+	Index                int
+	Address              string
 }
 
 type Utxo struct {
 	Txid string `json:"txid"`
-	Vout []struct {
-		Scriptpubkey         string  `json:"scriptpubkey"`
-		Scriptpubkey_asm     string  `json:"scriptpubkey_asm"`
-		Scriptpubkey_address string  `json:"scriptpubkey_address"`
-		Scriptpubkey_type    string  `json:"scriptpubkey_type"`
-		Value                float64 `json:"value"`
-	}`json:"vout"`
+	Vout []UtxoVout `json:"vout"`
 	Status struct {
-		Confirmed bool `json:"confirmed"`
+		Confirmed    bool    `json:"confirmed"`
 		Block_height float64 `json:"block_height"`
-		Block_hash string `json:"block_hash"`
-		Block_time float64 `json:"block_time"`
+		Block_hash   string  `json:"block_hash"`
+		Block_time   float64 `json:"block_time"`
 	}
 	Value float64 `json:"value"`
 }
 
+type UtxoReturnVout struct {
+	Value                float64 `json:"value"`
+	Index                int
+	Address              string
+}
+
+type UtxoReturn struct {
+	Txid string `json:"txid"`
+	Vout []UtxoReturnVout `json:"vout"`
+}
+
 // curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigetutxos"
-func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utxo, error) {
+func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]UtxoReturn, error) {
 	var x []Utxo
-	body := "http://localhost:443/address/" + addr + "/txs"
+	body := "http://35.229.68.185:443/address/" + addr + "/txs"
 	log.Println(body)
 	data, err := Get(body)
 	if err != nil {
 		log.Println("did not get response", err)
-		return x, err
+		return nil, err
 	}
 	// now data is in byte, we need the other structure now
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
-		return x, err
+		return nil, err
 	}
 
-	return x, nil
+	y := make([]UtxoReturn, len(x))
+	for j, elem := range x {
+		y[j].Txid = x[j].Txid
+		y[j].Vout = make([]UtxoReturnVout, len(x[j].Vout))
+		for i, elem2 := range elem.Vout {
+			y[j].Vout[i].Index = i + 1
+			y[j].Vout[i].Address = elem2.Scriptpubkey_address
+			y[j].Vout[i].Value = elem2.Value
+		}
+	}
+	return y, nil
 }
 
 type GetBalanceFormat struct {
@@ -218,6 +243,7 @@ type MultigetBalance struct {
 type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
+
 // example request:
 // curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigetbalance"
 func multigetBalance() {
@@ -296,7 +322,7 @@ func multigetUtxos() {
 			log.Fatal(err)
 		}
 		arr := rf.Addresses
-		var result [][]Utxo
+		var result [][]UtxoReturn
 		for _, elem := range arr {
 			// send the request out
 			tempTxs, err := GetUtxosAddress(w, r, elem)
