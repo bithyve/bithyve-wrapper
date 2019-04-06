@@ -153,32 +153,22 @@ type UtxoVout struct {
 }
 
 type Utxo struct {
-	Txid string `json:"txid"`
-	Vout []UtxoVout `json:"vout"`
+	Txid   string `json:"txid"`
+	Vout   int    `json:"vout"`
 	Status struct {
 		Confirmed    bool    `json:"confirmed"`
 		Block_height float64 `json:"block_height"`
 		Block_hash   string  `json:"block_hash"`
 		Block_time   float64 `json:"block_time"`
-	}
-	Value float64 `json:"value"`
-}
-
-type UtxoReturnVout struct {
-	Value                float64 `json:"value"`
-	Index                int
-	Address              string
-}
-
-type UtxoReturn struct {
-	Txid string `json:"txid"`
-	Vout []UtxoReturnVout `json:"vout"`
+	} `json:"status"`
+	Value   float64 `json:"value"`
+	Address string
 }
 
 // curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigetutxos"
-func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]UtxoReturn, error) {
+func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utxo, error) {
 	var x []Utxo
-	body := "http://35.229.68.185:443/address/" + addr + "/txs"
+	body := "http://35.229.68.185:443/address/" + addr + "/utxo"
 	log.Println(body)
 	data, err := Get(body)
 	if err != nil {
@@ -186,23 +176,17 @@ func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utx
 		return nil, err
 	}
 	// now data is in byte, we need the other structure now
+	log.Println(string(data))
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
 		return nil, err
 	}
 
-	y := make([]UtxoReturn, len(x))
-	for j, elem := range x {
-		y[j].Txid = x[j].Txid
-		y[j].Vout = make([]UtxoReturnVout, len(x[j].Vout))
-		for i, elem2 := range elem.Vout {
-			y[j].Vout[i].Index = i + 1
-			y[j].Vout[i].Address = elem2.Scriptpubkey_address
-			y[j].Vout[i].Value = elem2.Value
-		}
+	for i, _ := range x {
+		x[i].Address = addr
 	}
-	return y, nil
+	return x, nil
 }
 
 type GetBalanceFormat struct {
@@ -322,7 +306,7 @@ func multigetUtxos() {
 			log.Fatal(err)
 		}
 		arr := rf.Addresses
-		var result [][]UtxoReturn
+		var result [][]Utxo
 		for _, elem := range arr {
 			// send the request out
 			tempTxs, err := GetUtxosAddress(w, r, elem)
