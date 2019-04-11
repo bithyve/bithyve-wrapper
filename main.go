@@ -101,7 +101,7 @@ type Tx struct {
 		} `json:"prevout"`
 		Scriptsig     string  `json:"scriptsig"`
 		Scriptsig_asm string  `json:"scriptsig_asm"`
-		Witness       string  `json:"witness"`
+		Witness       []string  `json:"witness"`
 		Is_coinbase   bool    `json:"is_coinbase"`
 		Sequence      float64 `json:"sequence"`
 	} `json:"vin"`
