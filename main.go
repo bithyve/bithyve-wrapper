@@ -67,6 +67,25 @@ func Send(w http.ResponseWriter, x interface{}) {
 }
 
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
+func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
+	body := "http://35.229.68.185:443/address/" + addr
+	data, err := Get(body)
+	if err != nil {
+		log.Println("did not get response", err)
+		return -1, -1
+	}
+	// now data is in byte, we need the other structure now
+	var x GetBalanceFormat
+	err = json.Unmarshal(data, &x)
+	if err != nil {
+		log.Println("did not unmarshal json", err)
+		return -1, -1
+	}
+
+	return x.ChainStats.Funded_txo_count, x.MempoolStats.Funded_txo_count
+}
+
+// GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://35.229.68.185:443/address/" + addr
 	data, err := Get(body)
@@ -321,10 +340,50 @@ func multigetUtxos() {
 	})
 }
 
+type MultigetAddr struct {
+	TotalTransactions float64
+	ConfirmedTransactions float64
+	UnconfirmedTransactions float64
+	Transactions []Tx
+	Address string
+}
+
+func multigetAddr() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		checkPostRequest(w, r) // check origin of request as well if needed
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Fatal(err)
+		}
+		arr := rf.Addresses
+		x := make([]MultigetAddr, len(arr))
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			// send the request out
+			allTxs, err := GetTxsAddress(w, r, elem)
+			if err != nil {
+				continue
+			}
+			x[i].TotalTransactions = float64(len(allTxs))
+			x[i].Transactions = allTxs
+			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
+		}
+		Send(w, x)
+	})
+}
+
 func startHandlers() {
 	multigetBalance()
 	multigetTxs()
 	multigetUtxos()
+	multigetAddr()
 }
 
 func main() {
