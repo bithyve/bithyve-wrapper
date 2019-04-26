@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Get(url string) ([]byte, error) {
@@ -66,6 +67,16 @@ func Send(w http.ResponseWriter, x interface{}) {
 	WriteToHandler(w, xJson)
 }
 
+type Status404 struct {
+	Status int
+}
+
+func Send404(w http.ResponseWriter) {
+	var x Status404
+	x.Status = 404
+	Send(w, x)
+}
+
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://35.229.68.185:443/address/" + addr
@@ -118,11 +129,11 @@ type Tx struct {
 			Scriptpubkey_type    string  `json:"scriptpubkey_type"`
 			Value                float64 `json:"value"`
 		} `json:"prevout"`
-		Scriptsig     string  `json:"scriptsig"`
-		Scriptsig_asm string  `json:"scriptsig_asm"`
-		Witness       []string  `json:"witness"`
-		Is_coinbase   bool    `json:"is_coinbase"`
-		Sequence      float64 `json:"sequence"`
+		Scriptsig     string   `json:"scriptsig"`
+		Scriptsig_asm string   `json:"scriptsig_asm"`
+		Witness       []string `json:"witness"`
+		Is_coinbase   bool     `json:"is_coinbase"`
+		Sequence      float64  `json:"sequence"`
 	} `json:"vin"`
 	Vout []struct {
 		Scriptpubkey         string  `json:"scriptpubkey"`
@@ -140,6 +151,7 @@ type Tx struct {
 		Block_hash   string  `json:"block_hash"`
 		Block_time   float64 `json:"block_time"`
 	}
+	NumberofConfirmations float64
 }
 
 func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, error) {
@@ -341,11 +353,28 @@ func multigetUtxos() {
 }
 
 type MultigetAddr struct {
-	TotalTransactions float64
-	ConfirmedTransactions float64
+	TotalTransactions       float64
+	ConfirmedTransactions   float64
 	UnconfirmedTransactions float64
-	Transactions []Tx
-	Address string
+	Transactions            []Tx
+	Address                 string
+}
+
+func currentBlockHeight() (float64, error) {
+	body := "http://35.229.68.185:443/blocks/tip/height"
+	data, err := Get(body)
+	if err != nil {
+		log.Println("did not get response", err)
+		return -1, err
+	}
+
+	// now the data needs to be converted into an integer ie string to float
+	stringBn := string(data)
+	intBn, err := strconv.ParseFloat(stringBn, 32)
+	if err != nil {
+		return -1, err
+	}
+	return intBn, nil
 }
 
 func multigetAddr() {
@@ -355,15 +384,22 @@ func multigetAddr() {
 		checkPostRequest(w, r) // check origin of request as well if needed
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			Send404(w)
+			return
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
-			log.Fatal(err)
+			Send404(w)
+			return
 		}
 		arr := rf.Addresses
 		x := make([]MultigetAddr, len(arr))
+		currentBh, err := currentBlockHeight()
+		if err != nil {
+			Send404(w)
+			return
+		}
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
 			// send the request out
@@ -373,6 +409,9 @@ func multigetAddr() {
 			}
 			x[i].TotalTransactions = float64(len(allTxs))
 			x[i].Transactions = allTxs
+			for j, _ := range x[i].Transactions {
+				x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.Block_height
+			}
 			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
 		}
 		Send(w, x)
