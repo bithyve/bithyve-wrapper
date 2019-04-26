@@ -268,12 +268,14 @@ func multigetBalance() {
 		checkPostRequest(w, r) // check origin of request as well if needed
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			Send404(w)
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			Send404(w)
 		}
 		arr := rf.Addresses
 		balance := float64(0)
@@ -299,12 +301,14 @@ func multigetTxs() {
 		checkPostRequest(w, r) // check origin of request as well if needed
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			Send404(w)
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			Send404(w)
 		}
 		arr := rf.Addresses
 		var result [][]Tx
@@ -329,12 +333,14 @@ func multigetUtxos() {
 		checkPostRequest(w, r) // check origin of request as well if needed
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			Send404(w)
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			Send404(w)
 		}
 		arr := rf.Addresses
 		var result [][]Utxo
@@ -384,12 +390,14 @@ func multigetAddr() {
 		checkPostRequest(w, r) // check origin of request as well if needed
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
+			log.Println(err)
 			Send404(w)
 			return
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
+			log.Println(err)
 			Send404(w)
 			return
 		}
@@ -397,6 +405,7 @@ func multigetAddr() {
 		x := make([]MultigetAddr, len(arr))
 		currentBh, err := currentBlockHeight()
 		if err != nil {
+			log.Println(err)
 			Send404(w)
 			return
 		}
