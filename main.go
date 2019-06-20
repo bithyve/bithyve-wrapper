@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,6 +25,31 @@ func Get(url string) ([]byte, error) {
 	}
 	defer res.Body.Close()
 	return ioutil.ReadAll(res.Body)
+}
+
+func Post(body string, payload io.Reader) ([]byte, error) {
+	// the body must be the param that you usually pass to curl's -d option
+	var dummy []byte
+	req, err := http.NewRequest("POST", body, payload)
+	if err != nil {
+		log.Println("did not create new POST request", err)
+		return dummy, err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Println("did not make request", err)
+		return dummy, err
+	}
+
+	defer res.Body.Close()
+	x, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Println("did not read from ioutil", err)
+		return dummy, err
+	}
+
+	return x, nil
 }
 
 type StatusResponse struct {
@@ -435,14 +461,14 @@ func ping() {
 }
 
 type FeeResponse struct {
-	Two float64 `json:"2"`
-	Three float64 `json:"3"`
-	Four float64 `json:"4"`
-	Six float64 `json:"6"`
-	Ten float64 `json:"10"`
-	Twenty float64 `json:"20"`
-	OneFourFour float64 `json:"144"`
-	FiveZeroFour float64 `json:"504"`
+	Two              float64 `json:"2"`
+	Three            float64 `json:"3"`
+	Four             float64 `json:"4"`
+	Six              float64 `json:"6"`
+	Ten              float64 `json:"10"`
+	Twenty           float64 `json:"20"`
+	OneFourFour      float64 `json:"144"`
+	FiveZeroFour     float64 `json:"504"`
 	OneThousandEight float64 `json:"1008"`
 }
 
@@ -468,6 +494,20 @@ func getFees() {
 	})
 }
 
+func postTx() {
+	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		checkPostRequest(w, r)
+		body := "http://testapi.bithyve.com/tx"
+		data, err := Post(body, r.Body)
+		if err != nil {
+			log.Println("could not submit transacation to testnet, quitting")
+		}
+
+		Send(w, data)
+	})
+}
+
 func startHandlers() {
 	multigetBalance()
 	multigetTxs()
@@ -475,6 +515,7 @@ func startHandlers() {
 	multigetAddr()
 	ping()
 	getFees()
+	postTx()
 }
 
 func main() {
