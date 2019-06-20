@@ -79,7 +79,7 @@ func Send404(w http.ResponseWriter) {
 
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
-	body := "http://35.229.68.185:443/address/" + addr
+	body := "http://testapi.bithyve.com/address/" + addr
 	data, err := Get(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -98,7 +98,7 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
-	body := "http://35.229.68.185:443/address/" + addr
+	body := "http://testapi.bithyve.com/address/" + addr
 	data, err := Get(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -156,7 +156,7 @@ type Tx struct {
 
 func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, error) {
 	var x []Tx
-	body := "http://35.229.68.185:443/address/" + addr + "/txs"
+	body := "http://testapi.bithyve.com/address/" + addr + "/txs"
 	log.Println(body)
 	data, err := Get(body)
 	if err != nil {
@@ -199,7 +199,7 @@ type Utxo struct {
 // curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigetutxos"
 func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utxo, error) {
 	var x []Utxo
-	body := "http://35.229.68.185:443/address/" + addr + "/utxo"
+	body := "http://testapi.bithyve.com/address/" + addr + "/utxo"
 	log.Println(body)
 	data, err := Get(body)
 	if err != nil {
@@ -367,7 +367,7 @@ type MultigetAddr struct {
 }
 
 func currentBlockHeight() (float64, error) {
-	body := "http://35.229.68.185:443/blocks/tip/height"
+	body := "http://testapi.bithyve.com/blocks/tip/height"
 	data, err := Get(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -427,16 +427,63 @@ func multigetAddr() {
 	})
 }
 
+func ping() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Server up"))
+	})
+}
+
+type FeeResponse struct {
+	Two float64 `json:"2"`
+	Three float64 `json:"3"`
+	Four float64 `json:"4"`
+	Six float64 `json:"6"`
+	Ten float64 `json:"10"`
+	Twenty float64 `json:"20"`
+	OneFourFour float64 `json:"144"`
+	FiveZeroFour float64 `json:"504"`
+	OneThousandEight float64 `json:"1008"`
+}
+
+func getFees() {
+	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		checkGetRequest(w, r) // check origin of request as well if needed
+		body := "http://testapi.bithyve.com/fee-estimates"
+		data, err := Get(body)
+		if err != nil {
+			log.Println("did not get response", err)
+			responseHandler(w, http.StatusInternalServerError)
+		}
+
+		var x FeeResponse
+		err = json.Unmarshal(data, &x)
+		if err != nil {
+			log.Println("could not unmarshal fee response struct, quitting")
+			responseHandler(w, http.StatusInternalServerError)
+		}
+
+		Send(w, x)
+	})
+}
+
 func startHandlers() {
 	multigetBalance()
 	multigetTxs()
 	multigetUtxos()
 	multigetAddr()
+	ping()
+	getFees()
 }
 
 func main() {
 	startHandlers()
 	// if you're running esplora, use socat tcp-listen:3003,reuseaddr,fork tcp:localhost:3002 to tunnel port since
 	// it does not seem possible to open the port directly
-	log.Fatal(http.ListenAndServe("localhost:3002", nil)) // 3001 os hardcoded as of now
+	// // setup https here
+	err := http.ListenAndServeTLS("localhost:445", "ssl/server.crt", "ssl/server.key", nil)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
