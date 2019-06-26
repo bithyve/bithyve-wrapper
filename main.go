@@ -508,6 +508,35 @@ func postTx() {
 	})
 }
 
+func relayTxid() {
+	http.HandleFunc("/txid", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		checkGetRequest(w, r)
+		if r.URL.Query()["txid"] == nil {
+			responseHandler(w, http.StatusBadRequest)
+			return
+		}
+
+		txid := r.URL.Query()["txid"][0]
+		body := "http://testapi.bithyve.com/tx/" + txid
+		data, err := Get(body)
+		if err != nil {
+			log.Println("could not submit transacation to testnet, quitting")
+			responseHandler(w, http.StatusInternalServerError)
+			return
+		}
+
+		var x Tx
+		err = json.Unmarshal(data, &x)
+		if err != nil {
+			log.Println("coudln't unmarshal data, quitting")
+			responseHandler(w, http.StatusInternalServerError)
+			return
+		}
+		Send(w, x)
+	})
+}
+
 func startHandlers() {
 	multigetBalance()
 	multigetTxs()
@@ -516,6 +545,7 @@ func startHandlers() {
 	ping()
 	getFees()
 	postTx()
+	relayTxid()
 }
 
 func main() {
