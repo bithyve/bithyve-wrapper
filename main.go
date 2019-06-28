@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	//"strings"
 )
 
 func Get(url string) ([]byte, error) {
@@ -537,6 +538,26 @@ func relayTxid() {
 	})
 }
 
+func relayGet() {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		checkGetRequest(w, r)
+		log.Println(r.URL.String())
+
+		body := "http://testapi.bithyve.com" + r.URL.String()
+		data, err := Get(body)
+		if err != nil {
+			log.Println("could not submit transacation to testnet, quitting")
+			responseHandler(w, http.StatusInternalServerError)
+			return
+		}
+
+		var x interface{}
+		_ = json.Unmarshal(data, &x)
+		Send(w, x)
+	})
+}
+
 func startHandlers() {
 	multigetBalance()
 	multigetTxs()
@@ -546,6 +567,7 @@ func startHandlers() {
 	getFees()
 	postTx()
 	relayTxid()
+	relayGet()
 }
 
 func main() {
