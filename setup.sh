@@ -25,14 +25,14 @@ cargo version
 wget https://bitcoincore.org/bin/bitcoin-core-0.18.0/bitcoin-0.18.0-x86_64-linux-gnu.tar.gz
 tar -xvf bitcoin-0.18.0-x86_64-linux-gnu.tar.gz
 cd bitcoin-0.18.0/bin
-mv bitcoind /usr/local/bin # or wherever you would like to have bitcoind
+mv bitcoind /usr/local/ # or wherever you would like to have bitcoind
 bitcoind -daemon -testnet # start bitcoind on testnet or mainnet
 
 # Clone, build and run electrs
-git clone https://github.com/Blockstream/electrs.git
+git clone -b new-index https://github.com/Blockstream/electrs.git
 cd electrs
 # change below parameters based on your bitcoind parameters
-screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir /home/<your_username>/.bitcoin --cookie=username:password --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
+screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir ~/.bitcoin --cookie=username:password --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
 
 # Go get and build the Bithyve Wrapper
 go get github.com/bithyve/bithyve-wrapper
@@ -49,3 +49,6 @@ cp fullchain.pem server.crt ; cp privkey.pem server.key ; mv server.* ~/go/src/g
 # Run the bithyve wrapper
 cd ~/go/src/github.com/bithyve/bithyve-wrapper
 screen -SL wrapper ./bithyve-wrapper
+
+sudo screen -SL socat443 socat tcp-listen:443,reuseaddr,fork tcp:localhost:445 # 445-443 for the wrapper
+sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001 # 3001-80 for electrs
