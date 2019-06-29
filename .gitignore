@@ -1,3 +1,4 @@
 bithyve-wrapper
 ssl/
 .DS_Store
+test/
