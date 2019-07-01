@@ -504,8 +504,14 @@ func postTx() {
 		if err != nil {
 			log.Println("could not submit transacation to testnet, quitting")
 		}
-
-		Send(w, data)
+		var x interface{}
+		err = json.Unmarshal(data, &x)
+		if err != nil {
+			log.Println("error while unmarshalling json struct", string(data))
+			w.Write(data)
+			return
+		}
+		Send(w, x)
 	})
 }
 
