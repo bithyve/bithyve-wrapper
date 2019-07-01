@@ -11,17 +11,6 @@ import (
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
-func Send(w http.ResponseWriter, x interface{}) {
-	xJson, err := json.Marshal(x)
-	if err != nil {
-		log.Println("did not marshal json", err)
-		erpc.ResponseHandler(w, http.StatusInternalServerError)
-		return
-	}
-	erpc.WriteToHandler(w, xJson)
-}
-
-// GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://testapi.bithyve.com/address/" + addr
 	data, err := erpc.GetRequest(body)
@@ -40,7 +29,6 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 	return x.ChainStats.Funded_txo_count, x.MempoolStats.Funded_txo_count
 }
 
-// GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://testapi.bithyve.com/address/" + addr
 	data, err := erpc.GetRequest(body)
@@ -140,7 +128,6 @@ type Utxo struct {
 	Address string
 }
 
-// curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigetutxos"
 func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utxo, error) {
 	var x []Utxo
 	body := "http://testapi.bithyve.com/address/" + addr + "/utxo"
@@ -182,7 +169,7 @@ type GetBalanceFormat struct {
 	} `json:"mempool_stats"`
 }
 
-type MultigetBalance struct {
+type MultigetBalanceReturn struct {
 	Balance            float64
 	UnconfirmedBalance float64
 }
@@ -191,9 +178,7 @@ type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
 
-// example request:
-// curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigetbalance"
-func multigetBalance() {
+func MultigetBalance() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -222,15 +207,14 @@ func multigetBalance() {
 			balance += tBalance
 			uBalance += tUnconfirmedBalance
 		}
-		var x MultigetBalance
+		var x MultigetBalanceReturn
 		x.Balance = balance
 		x.UnconfirmedBalance = uBalance
-		Send(w, x)
+		erpc.MarshalSend(w, x)
 	})
 }
 
-// curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -H "Origin: localhost" -H "Cache-Control: no-cache" -d 'addresses=17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT%2C17rdSE552fTwvRqLxdKJtfkncB1om8XtJT' "http://localhost:3001/multigettxs"
-func multigetTxs() {
+func MultigetTxs() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -262,11 +246,11 @@ func multigetTxs() {
 			}
 			result = append(result, tempTxs)
 		}
-		Send(w, result)
+		erpc.MarshalSend(w, result)
 	})
 }
 
-func multigetUtxos() {
+func MultigetUtxos() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -298,11 +282,11 @@ func multigetUtxos() {
 			}
 			result = append(result, tempTxs)
 		}
-		Send(w, result)
+		erpc.MarshalSend(w, result)
 	})
 }
 
-type MultigetAddr struct {
+type MultigetAddrReturn struct {
 	TotalTransactions       float64
 	ConfirmedTransactions   float64
 	UnconfirmedTransactions float64
@@ -310,7 +294,7 @@ type MultigetAddr struct {
 	Address                 string
 }
 
-func currentBlockHeight() (float64, error) {
+func CurrentBlockHeight() (float64, error) {
 	body := "http://testapi.bithyve.com/blocks/tip/height"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
@@ -327,7 +311,7 @@ func currentBlockHeight() (float64, error) {
 	return intBn, nil
 }
 
-func multigetAddr() {
+func MultigetAddr() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -350,8 +334,8 @@ func multigetAddr() {
 			return
 		}
 		arr := rf.Addresses
-		x := make([]MultigetAddr, len(arr))
-		currentBh, err := currentBlockHeight()
+		x := make([]MultigetAddrReturn, len(arr))
+		currentBh, err := CurrentBlockHeight()
 		if err != nil {
 			log.Println(err)
 			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
@@ -371,14 +355,7 @@ func multigetAddr() {
 			}
 			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
 		}
-		Send(w, x)
-	})
-}
-
-func ping() {
-	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Server up"))
+		erpc.MarshalSend(w, x)
 	})
 }
 
@@ -394,7 +371,7 @@ type FeeResponse struct {
 	OneThousandEight float64 `json:"1008"`
 }
 
-func getFees() {
+func GetFees() {
 	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
@@ -402,25 +379,14 @@ func getFees() {
 			log.Println(err)
 			return
 		}
-		body := "http://testapi.bithyve.com/fee-estimates"
-		data, err := erpc.GetRequest(body)
-		if err != nil {
-			log.Println("did not get response", err)
-			erpc.ResponseHandler(w, http.StatusInternalServerError)
-		}
 
 		var x FeeResponse
-		err = json.Unmarshal(data, &x)
-		if err != nil {
-			log.Println("could not unmarshal fee response struct, quitting")
-			erpc.ResponseHandler(w, http.StatusInternalServerError)
-		}
-
-		Send(w, x)
+		body := "http://testapi.bithyve.com/fee-estimates"
+		erpc.GetAndSendJson(w, body, x)
 	})
 }
 
-func postTx() {
+func PostTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
@@ -440,11 +406,11 @@ func postTx() {
 			w.Write(data)
 			return
 		}
-		Send(w, x)
+		erpc.MarshalSend(w, x)
 	})
 }
 
-func relayTxid() {
+func RelayTxid() {
 	http.HandleFunc("/txid", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
@@ -459,25 +425,12 @@ func relayTxid() {
 
 		txid := r.URL.Query()["txid"][0]
 		body := "http://testapi.bithyve.com/tx/" + txid
-		data, err := erpc.GetRequest(body)
-		if err != nil {
-			log.Println("could not submit transacation to testnet, quitting")
-			erpc.ResponseHandler(w, http.StatusInternalServerError)
-			return
-		}
-
 		var x Tx
-		err = json.Unmarshal(data, &x)
-		if err != nil {
-			log.Println("coudln't unmarshal data, quitting")
-			erpc.ResponseHandler(w, http.StatusInternalServerError)
-			return
-		}
-		Send(w, x)
+		erpc.GetAndSendJson(w, body, x)
 	})
 }
 
-func relayGetRequest() {
+func RelayGetRequest() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckGet(w, r) // check origin of request as well if needed
@@ -496,20 +449,20 @@ func relayGetRequest() {
 
 		var x interface{}
 		_ = json.Unmarshal(data, &x)
-		Send(w, x)
+		erpc.MarshalSend(w, x)
 	})
 }
 
 func startHandlers() {
-	multigetBalance()
-	multigetTxs()
-	multigetUtxos()
-	multigetAddr()
-	ping()
-	getFees()
-	postTx()
-	relayTxid()
-	relayGetRequest()
+	MultigetBalance()
+	MultigetTxs()
+	MultigetUtxos()
+	MultigetAddr()
+	erpc.SetupPingHandler()
+	GetFees()
+	PostTx()
+	RelayTxid()
+	RelayGetRequest()
 }
 
 func main() {
