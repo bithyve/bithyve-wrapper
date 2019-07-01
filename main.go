@@ -2,112 +2,29 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	//"strings"
+
+	erpc "github.com/Varunram/essentials/rpc"
 )
-
-func Get(url string) ([]byte, error) {
-	var dummy []byte
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Println("did not create new GET request", err)
-		return dummy, err
-	}
-	req.Header.Set("Origin", "localhost")
-	res, err := client.Do(req)
-	if err != nil {
-		log.Println("did not make request", err)
-		return dummy, err
-	}
-	defer res.Body.Close()
-	return ioutil.ReadAll(res.Body)
-}
-
-func Post(body string, payload io.Reader) ([]byte, error) {
-	// the body must be the param that you usually pass to curl's -d option
-	var dummy []byte
-	req, err := http.NewRequest("POST", body, payload)
-	if err != nil {
-		log.Println("did not create new POST request", err)
-		return dummy, err
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Println("did not make request", err)
-		return dummy, err
-	}
-
-	defer res.Body.Close()
-	x, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Println("did not read from ioutil", err)
-		return dummy, err
-	}
-
-	return x, nil
-}
-
-type StatusResponse struct {
-	Code   int
-	Status string
-}
-
-func responseHandler(w http.ResponseWriter, status int) {
-	var response StatusResponse
-	response.Code = status
-	switch status {
-	case http.StatusOK:
-		response.Status = "OK"
-	case http.StatusBadRequest:
-		response.Status = "Bad Request error!"
-	case http.StatusNotFound:
-		response.Status = "404 Error Not Found!"
-	case http.StatusInternalServerError:
-		response.Status = "Internal Server Error"
-	default:
-		response.Status = "404 Page Not Found"
-	}
-	Send(w, response)
-}
-
-func WriteToHandler(w http.ResponseWriter, jsonString []byte) {
-	w.Header().Add("Access-Control-Allow-Headers", "Accept, Authorization, Cache-Control, Content-Type")
-	w.Header().Add("Access-Control-Allow-Methods", "*")
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonString)
-}
 
 func Send(w http.ResponseWriter, x interface{}) {
 	xJson, err := json.Marshal(x)
 	if err != nil {
 		log.Println("did not marshal json", err)
-		responseHandler(w, http.StatusInternalServerError)
+		erpc.ResponseHandler(w, http.StatusInternalServerError)
 		return
 	}
-	WriteToHandler(w, xJson)
-}
-
-type Status404 struct {
-	Status int
-}
-
-func Send404(w http.ResponseWriter) {
-	var x Status404
-	x.Status = 404
-	Send(w, x)
+	erpc.WriteToHandler(w, xJson)
 }
 
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://testapi.bithyve.com/address/" + addr
-	data, err := Get(body)
+	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
 		return -1, -1
@@ -126,7 +43,7 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 // GetAndSendJsonBalance is a handler that makes a get request and returns json data
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://testapi.bithyve.com/address/" + addr
-	data, err := Get(body)
+	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
 		return -1, -1
@@ -185,7 +102,7 @@ func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, e
 	var x []Tx
 	body := "http://testapi.bithyve.com/address/" + addr + "/txs"
 	log.Println(body)
-	data, err := Get(body)
+	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
 		return x, err
@@ -228,7 +145,7 @@ func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utx
 	var x []Utxo
 	body := "http://testapi.bithyve.com/address/" + addr + "/utxo"
 	log.Println(body)
-	data, err := Get(body)
+	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
 		return nil, err
@@ -265,18 +182,6 @@ type GetBalanceFormat struct {
 	} `json:"mempool_stats"`
 }
 
-func checkGetRequest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "404 page not found", http.StatusNotFound)
-	}
-}
-
-func checkPostRequest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "404 page not found", http.StatusNotFound)
-	}
-}
-
 type MultigetBalance struct {
 	Balance            float64
 	UnconfirmedBalance float64
@@ -292,17 +197,21 @@ func multigetBalance() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkPostRequest(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		}
 		arr := rf.Addresses
 		balance := float64(0)
@@ -325,17 +234,21 @@ func multigetTxs() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkPostRequest(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		}
 		arr := rf.Addresses
 		var result [][]Tx
@@ -344,7 +257,7 @@ func multigetTxs() {
 			tempTxs, err := GetTxsAddress(w, r, elem)
 			if err != nil {
 				log.Println(err)
-				responseHandler(w, http.StatusInternalServerError)
+				erpc.ResponseHandler(w, http.StatusInternalServerError)
 				return
 			}
 			result = append(result, tempTxs)
@@ -357,17 +270,21 @@ func multigetUtxos() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkPostRequest(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		}
 		arr := rf.Addresses
 		var result [][]Utxo
@@ -376,7 +293,7 @@ func multigetUtxos() {
 			tempTxs, err := GetUtxosAddress(w, r, elem)
 			if err != nil {
 				log.Println(err)
-				responseHandler(w, http.StatusInternalServerError)
+				erpc.ResponseHandler(w, http.StatusInternalServerError)
 				return
 			}
 			result = append(result, tempTxs)
@@ -395,7 +312,7 @@ type MultigetAddr struct {
 
 func currentBlockHeight() (float64, error) {
 	body := "http://testapi.bithyve.com/blocks/tip/height"
-	data, err := Get(body)
+	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
 		return -1, err
@@ -414,18 +331,22 @@ func multigetAddr() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkPostRequest(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 			return
 		}
 		var rf RequestFormat
 		err = json.Unmarshal(data, &rf)
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 			return
 		}
 		arr := rf.Addresses
@@ -433,7 +354,7 @@ func multigetAddr() {
 		currentBh, err := currentBlockHeight()
 		if err != nil {
 			log.Println(err)
-			Send404(w)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 			return
 		}
 		for i, elem := range arr {
@@ -476,19 +397,23 @@ type FeeResponse struct {
 func getFees() {
 	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkGetRequest(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		body := "http://testapi.bithyve.com/fee-estimates"
-		data, err := Get(body)
+		data, err := erpc.GetRequest(body)
 		if err != nil {
 			log.Println("did not get response", err)
-			responseHandler(w, http.StatusInternalServerError)
+			erpc.ResponseHandler(w, http.StatusInternalServerError)
 		}
 
 		var x FeeResponse
 		err = json.Unmarshal(data, &x)
 		if err != nil {
 			log.Println("could not unmarshal fee response struct, quitting")
-			responseHandler(w, http.StatusInternalServerError)
+			erpc.ResponseHandler(w, http.StatusInternalServerError)
 		}
 
 		Send(w, x)
@@ -498,9 +423,13 @@ func getFees() {
 func postTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkPostRequest(w, r)
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		body := "http://testapi.bithyve.com/tx"
-		data, err := Post(body, r.Body)
+		data, err := erpc.PostRequest(body, r.Body)
 		if err != nil {
 			log.Println("could not submit transacation to testnet, quitting")
 		}
@@ -518,18 +447,22 @@ func postTx() {
 func relayTxid() {
 	http.HandleFunc("/txid", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkGetRequest(w, r)
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		if r.URL.Query()["txid"] == nil {
-			responseHandler(w, http.StatusBadRequest)
+			erpc.ResponseHandler(w, http.StatusBadRequest)
 			return
 		}
 
 		txid := r.URL.Query()["txid"][0]
 		body := "http://testapi.bithyve.com/tx/" + txid
-		data, err := Get(body)
+		data, err := erpc.GetRequest(body)
 		if err != nil {
 			log.Println("could not submit transacation to testnet, quitting")
-			responseHandler(w, http.StatusInternalServerError)
+			erpc.ResponseHandler(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -537,24 +470,27 @@ func relayTxid() {
 		err = json.Unmarshal(data, &x)
 		if err != nil {
 			log.Println("coudln't unmarshal data, quitting")
-			responseHandler(w, http.StatusInternalServerError)
+			erpc.ResponseHandler(w, http.StatusInternalServerError)
 			return
 		}
 		Send(w, x)
 	})
 }
 
-func relayGet() {
+func relayGetRequest() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
-		checkGetRequest(w, r)
-		log.Println(r.URL.String())
-
+		err := erpc.CheckGet(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		// log.Println(r.URL.String())
 		body := "http://testapi.bithyve.com" + r.URL.String()
-		data, err := Get(body)
+		data, err := erpc.GetRequest(body)
 		if err != nil {
 			log.Println("could not submit transacation to testnet, quitting")
-			responseHandler(w, http.StatusInternalServerError)
+			erpc.ResponseHandler(w, http.StatusInternalServerError)
 			return
 		}
 
@@ -573,7 +509,7 @@ func startHandlers() {
 	getFees()
 	postTx()
 	relayTxid()
-	relayGet()
+	relayGetRequest()
 }
 
 func main() {
