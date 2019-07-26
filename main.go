@@ -44,7 +44,7 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 		return -1, -1
 	}
 
-	return x.ChainStats.Funded_txo_sum, x.MempoolStats.Funded_txo_sum
+	return x.ChainStats.Funded_txo_sum - x.ChainStats.Spent_txo_sum, x.MempoolStats.Funded_txo_sum - x.MempoolStats.Spent_txo_sum
 }
 
 type Tx struct {
