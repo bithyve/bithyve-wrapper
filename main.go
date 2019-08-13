@@ -351,7 +351,11 @@ func MultigetAddr() {
 			x[i].TotalTransactions = float64(len(allTxs))
 			x[i].Transactions = allTxs
 			for j, _ := range x[i].Transactions {
-				x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.Block_height
+				if x[i].Transactions[j].Status.Confirmed {
+					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.Block_height
+				} else {
+					x[i].Transactions[j].NumberofConfirmations = 0
+				}
 			}
 			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
 		}
