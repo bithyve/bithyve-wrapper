@@ -11,6 +11,7 @@ import (
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
+// GetBalanceCount gets the total incoming balance
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://testapi.bithyve.com/address/" + addr
 	data, err := erpc.GetRequest(body)
@@ -26,9 +27,10 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 		return -1, -1
 	}
 
-	return x.ChainStats.Funded_txo_count, x.MempoolStats.Funded_txo_count
+	return x.ChainStats.FundedTxoCount, x.MempoolStats.FundedTxoCount
 }
 
+// GetBalanceAddress gets the net balance of an address
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := "http://testapi.bithyve.com/address/" + addr
 	data, err := erpc.GetRequest(body)
@@ -44,9 +46,10 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 		return -1, -1
 	}
 
-	return x.ChainStats.Funded_txo_sum - x.ChainStats.Spent_txo_sum, x.MempoolStats.Funded_txo_sum - x.MempoolStats.Spent_txo_sum
+	return x.ChainStats.FundedTxoSum - x.ChainStats.SpentTxoSum, x.MempoolStats.FundedTxoSum - x.MempoolStats.SpentTxoSum
 }
 
+// Tx is a copy of the transaction structure used by esplora
 type Tx struct {
 	Txid     string  `json:"txid"`
 	Version  float64 `json:"version"`
@@ -55,37 +58,38 @@ type Tx struct {
 		Txid    string  `json:"txid"`
 		Vout    float64 `json:"vout"`
 		PrevOut struct {
-			Scriptpubkey         string  `json:"scriptpubkey"`
-			Scriptpubkey_asm     string  `json:"scriptpubkey_asm"`
-			Scriptpubkey_address string  `json:"scriptpubkey_address"`
-			Scriptpubkey_type    string  `json:"scriptpubkey_type"`
-			Value                float64 `json:"value"`
+			Scriptpubkey        string  `json:"scriptpubkey"`
+			ScriptpubkeyAsm     string  `json:"scriptpubkey_asm"`
+			ScriptpubkeyAddress string  `json:"scriptpubkey_address"`
+			ScriptpubkeyType    string  `json:"scriptpubkey_type"`
+			Value               float64 `json:"value"`
 		} `json:"prevout"`
-		Scriptsig     string   `json:"scriptsig"`
-		Scriptsig_asm string   `json:"scriptsig_asm"`
-		Witness       []string `json:"witness"`
-		Is_coinbase   bool     `json:"is_coinbase"`
-		Sequence      float64  `json:"sequence"`
+		Scriptsig    string   `json:"scriptsig"`
+		ScriptsigAsm string   `json:"scriptsig_asm"`
+		Witness      []string `json:"witness"`
+		IsCoinbase   bool     `json:"is_coinbase"`
+		Sequence     float64  `json:"sequence"`
 	} `json:"vin"`
 	Vout []struct {
-		Scriptpubkey         string  `json:"scriptpubkey"`
-		Scriptpubkey_asm     string  `json:"scriptpubkey_asm"`
-		Scriptpubkey_address string  `json:"scriptpubkey_address"`
-		Scriptpubkey_type    string  `json:"scriptpubkey_type"`
-		Value                float64 `json:"value"`
+		Scriptpubkey        string  `json:"scriptpubkey"`
+		ScriptpubkeyAsm     string  `json:"scriptpubkey_asm"`
+		ScriptpubkeyAddress string  `json:"scriptpubkey_address"`
+		ScriptpubkeyType    string  `json:"scriptpubkey_type"`
+		Value               float64 `json:"value"`
 	}
 	Size   float64 `json:"size"`
 	weight float64 `json:"weight"`
 	Fee    float64 `json:"fee"`
 	Status struct {
-		Confirmed    bool    `json:"confirmed"`
-		Block_height float64 `json:"block_height"`
-		Block_hash   string  `json:"block_hash"`
-		Block_time   float64 `json:"block_time"`
+		Confirmed   bool    `json:"confirmed"`
+		BlockHeight float64 `json:"block_height"`
+		BlockHash   string  `json:"block_hash"`
+		BlockTime   float64 `json:"block_time"`
 	}
 	NumberofConfirmations float64
 }
 
+// GetTxsAddress gets the transactions associated with a given address
 func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, error) {
 	var x []Tx
 	body := "http://testapi.bithyve.com/address/" + addr + "/txs"
@@ -105,29 +109,32 @@ func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, e
 	return x, nil
 }
 
+// UtxoVout is a structure for output utxos
 type UtxoVout struct {
-	Scriptpubkey         string  `json:"scriptpubkey"`
-	Scriptpubkey_asm     string  `json:"scriptpubkey_asm"`
-	Scriptpubkey_address string  `json:"scriptpubkey_address"`
-	Scriptpubkey_type    string  `json:"scriptpubkey_type"`
-	Value                float64 `json:"value"`
-	Index                int
-	Address              string
+	Scriptpubkey        string  `json:"scriptpubkey"`
+	ScriptpubkeyAsm     string  `json:"scriptpubkey_asm"`
+	ScriptpubkeyAddress string  `json:"scriptpubkey_address"`
+	ScriptpubkeyType    string  `json:"scriptpubkey_type"`
+	Value               float64 `json:"value"`
+	Index               int
+	Address             string
 }
 
+// Utxo is a copy of the esplora utxo struct
 type Utxo struct {
 	Txid   string `json:"txid"`
 	Vout   int    `json:"vout"`
 	Status struct {
-		Confirmed    bool    `json:"confirmed"`
-		Block_height float64 `json:"block_height"`
-		Block_hash   string  `json:"block_hash"`
-		Block_time   float64 `json:"block_time"`
+		Confirmed   bool    `json:"confirmed"`
+		BlockHeight float64 `json:"block_height"`
+		BlockHash   string  `json:"block_hash"`
+		BlockTime   float64 `json:"block_time"`
 	} `json:"status"`
 	Value   float64 `json:"value"`
 	Address string
 }
 
+// GetUtxosAddress gets the utxos associated with a given address
 func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utxo, error) {
 	var x []Utxo
 	body := "http://testapi.bithyve.com/address/" + addr + "/utxo"
@@ -145,39 +152,43 @@ func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utx
 		return nil, err
 	}
 
-	for i, _ := range x {
+	for i := range x {
 		x[i].Address = addr
 	}
 	return x, nil
 }
 
+// GetBalanceFormat is a struct that us used to get the blanace from esplora
 type GetBalanceFormat struct {
 	Address    string `json:"address"`
 	ChainStats struct {
-		Funded_txo_count float64 `json:"funded_txo_count"`
-		Funded_txo_sum   float64 `json:"funded_txo_sum"`
-		Spent_txo_count  float64 `json:"spent_txo_count"`
-		Spent_txo_sum    float64 `json:"spent_txo_sum"`
-		Tx_count         float64 `json:"tx_count"`
+		FundedTxoCount float64 `json:"funded_txo_count"`
+		FundedTxoSum   float64 `json:"funded_txo_sum"`
+		SpentTxoCount  float64 `json:"spent_txo_count"`
+		SpentTxoSum    float64 `json:"spent_txo_sum"`
+		TxCount        float64 `json:"tx_count"`
 	} `json:"chain_stats"`
 	MempoolStats struct {
-		Funded_txo_count float64 `json:"funded_txo_count"`
-		Funded_txo_sum   float64 `json:"funded_txo_sum"`
-		Spent_txo_count  float64 `json:"spent_txo_count"`
-		Spent_txo_sum    float64 `json:"spent_txo_sum `
-		Tx_count         float64 `json:"tx_count `
+		FundedTxoCount float64 `json:"funded_txo_count"`
+		FundedTxoSum   float64 `json:"funded_txo_sum"`
+		SpentTxoCount  float64 `json:"spent_txo_count"`
+		SpentTxoSum    float64 `json:"spent_txo_sum"`
+		TxCount        float64 `json:"tx_count"`
 	} `json:"mempool_stats"`
 }
 
+// MultigetBalanceReturn is a structure that is used for getting multiple balances
 type MultigetBalanceReturn struct {
 	Balance            float64
 	UnconfirmedBalance float64
 }
 
+// RequestFormat is the format in which incoming requests hsould arrive for the wrapper to process
 type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
 
+// MultigetBalance gets the net balance associated with multiple addresses
 func MultigetBalance() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +225,7 @@ func MultigetBalance() {
 	})
 }
 
+// MultigetTxs gets the transactions associated with mutliple addresses
 func MultigetTxs() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
@@ -250,6 +262,7 @@ func MultigetTxs() {
 	})
 }
 
+// MultigetUtxos gets the utxos associated with multiple addresses
 func MultigetUtxos() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
@@ -286,6 +299,7 @@ func MultigetUtxos() {
 	})
 }
 
+// MultigetAddrReturn is a structure used for multiple addresses json return
 type MultigetAddrReturn struct {
 	TotalTransactions       float64
 	ConfirmedTransactions   float64
@@ -294,6 +308,7 @@ type MultigetAddrReturn struct {
 	Address                 string
 }
 
+// CurrentBlockHeight gets the current block height from the blockchain
 func CurrentBlockHeight() (float64, error) {
 	body := "http://testapi.bithyve.com/blocks/tip/height"
 	data, err := erpc.GetRequest(body)
@@ -311,8 +326,9 @@ func CurrentBlockHeight() (float64, error) {
 	return intBn, nil
 }
 
+// MultigetAddr gets all data associated with a particular address
 func MultigetAddr() {
-	// make a curl request out to lcoalhost and get the ping response
+	// make a curl request out to localhost and get the ping response
 	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
@@ -352,7 +368,7 @@ func MultigetAddr() {
 			x[i].Transactions = allTxs
 			for j, _ := range x[i].Transactions {
 				if x[i].Transactions[j].Status.Confirmed {
-					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.Block_height
+					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
 				} else {
 					x[i].Transactions[j].NumberofConfirmations = 0
 				}
@@ -363,6 +379,7 @@ func MultigetAddr() {
 	})
 }
 
+// FeeResponse is a struct that is returned when a fee query is made
 type FeeResponse struct {
 	Two              float64 `json:"2"`
 	Three            float64 `json:"3"`
@@ -375,6 +392,7 @@ type FeeResponse struct {
 	OneThousandEight float64 `json:"1008"`
 }
 
+// GetFees gets the current fee estimate from esplora
 func GetFees() {
 	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -390,6 +408,7 @@ func GetFees() {
 	})
 }
 
+// PostTx posts a transaction to the blockchain
 func PostTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -414,6 +433,7 @@ func PostTx() {
 	})
 }
 
+// RelayTxid gets the information associated with a particular tx on the blockchain
 func RelayTxid() {
 	http.HandleFunc("/txid", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -434,6 +454,7 @@ func RelayTxid() {
 	})
 }
 
+// RelayGetRequest relays all remaining get requests to the esplora instance
 func RelayGetRequest() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
