@@ -78,7 +78,7 @@ type Tx struct {
 		Value               float64 `json:"value"`
 	}
 	Size   float64 `json:"size"`
-	weight float64 `json:"weight"`
+	Weight float64 `json:"weight"`
 	Fee    float64 `json:"fee"`
 	Status struct {
 		Confirmed   bool    `json:"confirmed"`
@@ -366,7 +366,7 @@ func MultigetAddr() {
 			}
 			x[i].TotalTransactions = float64(len(allTxs))
 			x[i].Transactions = allTxs
-			for j, _ := range x[i].Transactions {
+			for j := range x[i].Transactions {
 				if x[i].Transactions[j].Status.Confirmed {
 					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
 				} else {
