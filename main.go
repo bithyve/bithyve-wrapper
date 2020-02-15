@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
 	//"strings"
 
 	erpc "github.com/Varunram/essentials/rpc"
@@ -478,6 +479,63 @@ func RelayGetRequest() {
 	})
 }
 
+// BalTx is a struct used for the baltxs endpoint
+type BalTx struct {
+	Balance      MultigetBalanceReturn
+	Transactions [][]Tx
+}
+
+// GetBalAndTx gets the net balance and transactions associated with a set of addresses
+func GetBalAndTx() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+		arr := rf.Addresses
+		balance := float64(0)
+		uBalance := float64(0)
+		for _, elem := range arr {
+			// send the request out
+			tBalance, tUnconfirmedBalance := GetBalanceAddress(w, r, elem)
+			balance += tBalance
+			uBalance += tUnconfirmedBalance
+		}
+
+		var result [][]Tx
+		for _, elem := range arr {
+			// send the request out
+			tempTxs, err := GetTxsAddress(w, r, elem)
+			if err != nil {
+				log.Println(err)
+				erpc.ResponseHandler(w, http.StatusInternalServerError)
+				return
+			}
+			result = append(result, tempTxs)
+		}
+
+		var x BalTx
+		x.Balance.Balance = balance
+		x.Balance.UnconfirmedBalance = uBalance
+		x.Transactions = result
+		erpc.MarshalSend(w, x)
+	})
+}
+
 func startHandlers() {
 	MultigetBalance()
 	MultigetTxs()
@@ -488,6 +546,7 @@ func startHandlers() {
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
+	GetBalAndTx()
 }
 
 func main() {
