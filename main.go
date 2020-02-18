@@ -6,14 +6,18 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
 	//"strings"
 
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
+// ElectrsURL is the URL of a running electrs instance
+var ElectrsURL = "http://testapi.bithyve.com"
+
 // GetBalanceCount gets the total incoming balance
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
-	body := "http://testapi.bithyve.com/address/" + addr
+	body := ElectrsURL + "/address/" + addr
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -32,7 +36,7 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 
 // GetBalanceAddress gets the net balance of an address
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
-	body := "http://testapi.bithyve.com/address/" + addr
+	body := ElectrsURL + "/address/" + addr
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -92,7 +96,7 @@ type Tx struct {
 // GetTxsAddress gets the transactions associated with a given address
 func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Tx, error) {
 	var x []Tx
-	body := "http://testapi.bithyve.com/address/" + addr + "/txs"
+	body := ElectrsURL + "/address/" + addr + "/txs"
 	log.Println(body)
 	data, err := erpc.GetRequest(body)
 	if err != nil {
@@ -137,7 +141,7 @@ type Utxo struct {
 // GetUtxosAddress gets the utxos associated with a given address
 func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]Utxo, error) {
 	var x []Utxo
-	body := "http://testapi.bithyve.com/address/" + addr + "/utxo"
+	body := ElectrsURL + "/address/" + addr + "/utxo"
 	log.Println(body)
 	data, err := erpc.GetRequest(body)
 	if err != nil {
@@ -310,7 +314,7 @@ type MultigetAddrReturn struct {
 
 // CurrentBlockHeight gets the current block height from the blockchain
 func CurrentBlockHeight() (float64, error) {
-	body := "http://testapi.bithyve.com/blocks/tip/height"
+	body := ElectrsURL + "/blocks/tip/height"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -403,7 +407,7 @@ func GetFees() {
 		}
 
 		var x FeeResponse
-		body := "http://testapi.bithyve.com/fee-estimates"
+		body := ElectrsURL + "/fee-estimates"
 		erpc.GetAndSendJson(w, body, x)
 	})
 }
@@ -417,7 +421,7 @@ func PostTx() {
 			log.Println(err)
 			return
 		}
-		body := "http://testapi.bithyve.com/tx"
+		body := ElectrsURL + "/tx"
 		data, err := erpc.PostRequest(body, r.Body)
 		if err != nil {
 			log.Println("could not submit transacation to testnet, quitting")
@@ -448,7 +452,7 @@ func RelayTxid() {
 		}
 
 		txid := r.URL.Query()["txid"][0]
-		body := "http://testapi.bithyve.com/tx/" + txid
+		body := ElectrsURL + "/tx/" + txid
 		var x Tx
 		erpc.GetAndSendJson(w, body, x)
 	})
@@ -464,7 +468,7 @@ func RelayGetRequest() {
 			return
 		}
 		// log.Println(r.URL.String())
-		body := "http://testapi.bithyve.com" + r.URL.String()
+		body := ElectrsURL + "" + r.URL.String()
 		data, err := erpc.GetRequest(body)
 		if err != nil {
 			log.Println("could not submit transacation to testnet, quitting")
@@ -474,6 +478,63 @@ func RelayGetRequest() {
 
 		var x interface{}
 		_ = json.Unmarshal(data, &x)
+		erpc.MarshalSend(w, x)
+	})
+}
+
+// BalTx is a struct used for the baltxs endpoint
+type BalTx struct {
+	Balance      MultigetBalanceReturn
+	Transactions [][]Tx
+}
+
+// GetBalAndTx gets the net balance and transactions associated with a set of addresses
+func GetBalAndTx() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+		arr := rf.Addresses
+		balance := float64(0)
+		uBalance := float64(0)
+		for _, elem := range arr {
+			// send the request out
+			tBalance, tUnconfirmedBalance := GetBalanceAddress(w, r, elem)
+			balance += tBalance
+			uBalance += tUnconfirmedBalance
+		}
+
+		var result [][]Tx
+		for _, elem := range arr {
+			// send the request out
+			tempTxs, err := GetTxsAddress(w, r, elem)
+			if err != nil {
+				log.Println(err)
+				erpc.ResponseHandler(w, http.StatusInternalServerError)
+				return
+			}
+			result = append(result, tempTxs)
+		}
+
+		var x BalTx
+		x.Balance.Balance = balance
+		x.Balance.UnconfirmedBalance = uBalance
+		x.Transactions = result
 		erpc.MarshalSend(w, x)
 	})
 }
@@ -488,6 +549,7 @@ func startHandlers() {
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
+	GetBalAndTx()
 }
 
 func main() {
