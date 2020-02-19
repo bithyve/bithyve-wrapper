@@ -229,6 +229,11 @@ func MultigetBalance() {
 	})
 }
 
+// TxReturn is used to return Txs
+type TxReturn struct {
+	Txs [][]Tx `json:"Txs"`
+}
+
 // MultigetTxs gets the transactions associated with mutliple addresses
 func MultigetTxs() {
 	// make a curl request out to lcoalhost and get the ping response
@@ -262,7 +267,9 @@ func MultigetTxs() {
 			}
 			result = append(result, tempTxs)
 		}
-		erpc.MarshalSend(w, result)
+		var x TxReturn
+		x.Txs = result
+		erpc.MarshalSend(w, x)
 	})
 }
 
@@ -485,11 +492,12 @@ func RelayGetRequest() {
 // BalTx is a struct used for the baltxs endpoint
 type BalTx struct {
 	Balance      MultigetBalanceReturn
-	Transactions [][]Tx
+	Transactions []MultigetAddrReturn `json:"Txs"`
 }
 
-// GetBalAndTx gets the net balance and transactions associated with a set of addresses
+// GetBalAndTx combines the balance and Multigetaddr endpoints
 func GetBalAndTx() {
+
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -500,7 +508,7 @@ func GetBalAndTx() {
 		}
 		data, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			log.Println(err)
+			log.Println("unable to read body: ", err)
 			erpc.ResponseHandler(w, erpc.StatusNotFound)
 		}
 		var rf RequestFormat
@@ -519,22 +527,36 @@ func GetBalAndTx() {
 			uBalance += tUnconfirmedBalance
 		}
 
-		var result [][]Tx
-		for _, elem := range arr {
+		x := make([]MultigetAddrReturn, len(arr))
+		currentBh, err := CurrentBlockHeight()
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			return
+		}
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
 			// send the request out
-			tempTxs, err := GetTxsAddress(w, r, elem)
+			allTxs, err := GetTxsAddress(w, r, elem)
 			if err != nil {
-				log.Println(err)
-				erpc.ResponseHandler(w, http.StatusInternalServerError)
-				return
+				continue
 			}
-			result = append(result, tempTxs)
+			x[i].TotalTransactions = float64(len(allTxs))
+			x[i].Transactions = allTxs
+			for j := range x[i].Transactions {
+				if x[i].Transactions[j].Status.Confirmed {
+					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
+				} else {
+					x[i].Transactions[j].NumberofConfirmations = 0
+				}
+			}
+			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
 		}
 
-		var x BalTx
-		x.Balance.Balance = balance
-		x.Balance.UnconfirmedBalance = uBalance
-		x.Transactions = result
+		var ret BalTx
+		ret.Balance.Balance = balance
+		ret.Balance.UnconfirmedBalance = uBalance
+		ret.Transactions = x
 		erpc.MarshalSend(w, x)
 	})
 }
