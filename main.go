@@ -557,7 +557,7 @@ func GetBalAndTx() {
 		ret.Balance.Balance = balance
 		ret.Balance.UnconfirmedBalance = uBalance
 		ret.Transactions = x
-		erpc.MarshalSend(w, x)
+		erpc.MarshalSend(w, ret)
 	})
 }
 
