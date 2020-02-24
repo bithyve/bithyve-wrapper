@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bithyve/bithyve-wrapper/electrs"
+	"github.com/bithyve/bithyve-wrapper/format"
+
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
@@ -24,7 +27,7 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 		erpc.ResponseHandler(w, erpc.StatusBadRequest)
 		return arr, err
 	}
-	var rf RequestFormat
+	var rf format.RequestFormat
 	err = json.Unmarshal(data, &rf)
 	if err != nil {
 		log.Println(err)
@@ -46,11 +49,11 @@ func MultigetUtxos() {
 			return
 		}
 
-		var result [][]Utxo
+		var result [][]format.Utxo
 		for _, elem := range arr {
 			// send the request out
 			go func(elem string) {
-				tempTxs, err := GetUtxosAddress(w, r, elem)
+				tempTxs, err := electrs.GetUtxosAddress(w, r, elem)
 				if err != nil {
 					log.Println(err)
 					erpc.ResponseHandler(w, http.StatusInternalServerError)
@@ -65,10 +68,10 @@ func MultigetUtxos() {
 }
 
 func multiAddr(w http.ResponseWriter, r *http.Request,
-	arr []string) ([]MultigetAddrReturn, error) {
+	arr []string) ([]format.MultigetAddrReturn, error) {
 
-	x := make([]MultigetAddrReturn, len(arr))
-	currentBh, err := CurrentBlockHeight()
+	x := make([]format.MultigetAddrReturn, len(arr))
+	currentBh, err := electrs.CurrentBlockHeight()
 	if err != nil {
 		log.Println(err)
 		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
@@ -79,7 +82,7 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 		x[i].Address = elem // store the address of the passed elements
 		// send the request out
 		go func(i int, elem string) {
-			allTxs, err := GetTxsAddress(w, r, elem)
+			allTxs, err := electrs.GetTxsAddress(w, r, elem)
 			if err == nil {
 				x[i].TotalTransactions = float64(len(allTxs))
 				x[i].Transactions = allTxs
@@ -92,7 +95,8 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 				}
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
 				go func(i int, elem string) {
-					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
+					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+						electrs.GetBalanceCount(w, r, elem)
 				}(i, elem)
 			}
 		}(i, elem)
@@ -130,7 +134,7 @@ func GetBalAndTx() {
 			return
 		}
 
-		var ret BalTx
+		var ret format.BalTx
 		ret.Balance = multiBalance(arr, w, r)
 		ret.Transactions, err = multiAddr(w, r, arr)
 		if err != nil {
@@ -141,13 +145,13 @@ func GetBalAndTx() {
 	})
 }
 
-func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) MultigetBalanceReturn {
-	var x MultigetBalanceReturn
+func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.MultigetBalanceReturn {
+	var x format.MultigetBalanceReturn
 	for _, elem := range arr {
 		// send the request out
 		tBalance, tUnconfirmedBalance := 0.0, 0.0
 		go func(elem string) {
-			tBalance, tUnconfirmedBalance = GetBalanceAddress(w, r, elem)
+			tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(w, r, elem)
 			x.Balance += tBalance
 			x.UnconfirmedBalance += tUnconfirmedBalance
 		}(elem)
@@ -167,7 +171,7 @@ func MultigetBalance() {
 			return
 		}
 
-		var x MultigetBalanceReturn
+		var x format.MultigetBalanceReturn
 		x = multiBalance(arr, w, r)
 
 		erpc.MarshalSend(w, x)
@@ -184,11 +188,11 @@ func MultigetTxs() {
 			return
 		}
 
-		var x TxReturn
+		var x format.TxReturn
 		for _, elem := range arr {
 			// send the request out
 			go func(elem string) {
-				tempTxs, err := GetTxsAddress(w, r, elem)
+				tempTxs, err := electrs.GetTxsAddress(w, r, elem)
 				if err != nil {
 					log.Println(err)
 					erpc.ResponseHandler(w, http.StatusInternalServerError)
@@ -199,6 +203,47 @@ func MultigetTxs() {
 		}
 
 		time.Sleep(50 * time.Millisecond)
+		erpc.MarshalSend(w, x)
+	})
+}
+
+// GetFees gets the current fee estimate from esplora
+func GetFees() {
+	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		var x format.FeeResponse
+		body := electrs.ElectrsURL + "/fee-estimates"
+		erpc.GetAndSendJson(w, body, x)
+	})
+}
+
+// PostTx posts a transaction to the blockchain
+func PostTx() {
+	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		body := electrs.ElectrsURL + "/tx"
+		data, err := erpc.PostRequest(body, r.Body)
+		if err != nil {
+			log.Println("could not submit transacation to testnet, quitting")
+		}
+		var x interface{}
+		err = json.Unmarshal(data, &x)
+		if err != nil {
+			log.Println("error while unmarshalling json struct", string(data))
+			w.Write(data)
+			return
+		}
 		erpc.MarshalSend(w, x)
 	})
 }
