@@ -567,13 +567,14 @@ func startHandlers() {
 	GetBalAndTx()
 	MultigetUtxos()
 	MultigetBalance()
+	MultigetTxs()
 
 	MultigetAddrNew()
 	GetBalAndTxNew()
 	MultigetUtxosNew()
 	MultigetBalanceNew()
+	MultigetTxsNew()
 
-	MultigetTxs()
 	erpc.SetupPingHandler()
 	GetFees()
 	PostTx()

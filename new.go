@@ -220,3 +220,45 @@ func MultigetBalanceNew() {
 		erpc.MarshalSend(w, x)
 	})
 }
+
+// MultigetTxsNew gets the transactions associated with mutliple addresses
+func MultigetTxsNew() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/multigettxsnew", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+
+		arr := rf.Addresses
+		var x TxReturn
+		for _, elem := range arr {
+			// send the request out
+			go func(elem string) {
+				tempTxs, err := GetTxsAddress(w, r, elem)
+				if err != nil {
+					log.Println(err)
+					erpc.ResponseHandler(w, http.StatusInternalServerError)
+					return
+				}
+				x.Txs = append(x.Txs, tempTxs)
+			}(elem)
+		}
+
+		time.Sleep(50 * time.Millisecond)
+		erpc.MarshalSend(w, x)
+	})
+}

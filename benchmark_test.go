@@ -21,13 +21,13 @@ func postRoutine(url string, inputx string) {
 	}
 
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("error: ", err)
 		return
 	}
 
-	//log.Println("response Body:", len(string(body)))
+	log.Println("response Body:", len(string(body)))
 }
 
 func BenchmarkMultiAddr(b *testing.B) {
@@ -92,6 +92,30 @@ func BenchmarkMultiGetUtxos(b *testing.B) {
 
 func BenchmarkMultiGetUtxosNew(b *testing.B) {
 	url := "https://testapi.bithyve.com/multigetutxosnew"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkMultiGetBalance(b *testing.B) {
+	url := "https://testapi.bithyve.com/multigetbalancenew"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkMultiGetBalanceNew(b *testing.B) {
+	url := "https://testapi.bithyve.com/multigetbalancenew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
