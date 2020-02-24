@@ -562,7 +562,6 @@ func GetBalAndTx() {
 	})
 }
 
-
 func startHandlers() {
 	MultigetAddr()
 	GetBalAndTx()
@@ -572,6 +571,7 @@ func startHandlers() {
 	MultigetAddrNew()
 	GetBalAndTxNew()
 	MultigetUtxosNew()
+	MultigetBalanceNew()
 
 	MultigetTxs()
 	erpc.SetupPingHandler()

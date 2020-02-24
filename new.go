@@ -181,3 +181,42 @@ func GetBalAndTxNew() {
 		erpc.MarshalSend(w, ret)
 	})
 }
+
+// MultigetBalanceNew gets the net balance associated with multiple addresses
+func MultigetBalanceNew() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/multigetbalancenew", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+		arr := rf.Addresses
+		var x MultigetBalanceReturn
+
+		for _, elem := range arr {
+			// send the request out
+			tBalance, tUnconfirmedBalance := 0.0, 0.0
+			go func(elem string) {
+				tBalance, tUnconfirmedBalance = GetBalanceAddress(w, r, elem)
+				x.Balance += tBalance
+				x.UnconfirmedBalance += tUnconfirmedBalance
+			}(elem)
+		}
+
+		time.Sleep(50 * time.Millisecond)
+		erpc.MarshalSend(w, x)
+	})
+}
