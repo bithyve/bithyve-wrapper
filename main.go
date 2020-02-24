@@ -311,6 +311,47 @@ func MultigetUtxos() {
 	})
 }
 
+// MultigetUtxosNew gets the utxos associated with multiple addresses
+func MultigetUtxosNew() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/multigetutxosnew", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+
+		arr := rf.Addresses
+		var result [][]Utxo
+		for _, elem := range arr {
+			// send the request out
+			go func(elem string) {
+				tempTxs, err := GetUtxosAddress(w, r, elem)
+				if err != nil {
+					log.Println(err)
+					erpc.ResponseHandler(w, http.StatusInternalServerError)
+					return
+				}
+				result = append(result, tempTxs)
+			}(elem)
+		}
+		time.Sleep(50 * time.Millisecond)
+		erpc.MarshalSend(w, result)
+	})
+}
+
 // MultigetAddrReturn is a structure used for multiple addresses json return
 type MultigetAddrReturn struct {
 	TotalTransactions       float64
@@ -695,18 +736,19 @@ func GetBalAndTxNew() {
 }
 
 func startHandlers() {
-	MultigetBalance()
-	MultigetTxs()
-	MultigetUtxos()
 	MultigetAddr()
 	MultigetAddrNew()
+	GetBalAndTx()
+	GetBalAndTxNew()
+	MultigetUtxos()
+	MultigetUtxosNew()
+	MultigetBalance()
+	MultigetTxs()
 	erpc.SetupPingHandler()
 	GetFees()
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
-	GetBalAndTx()
-	GetBalAndTxNew()
 }
 
 func main() {

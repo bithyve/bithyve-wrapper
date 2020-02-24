@@ -30,6 +30,30 @@ func postRoutine(url string, inputx string) {
 	log.Println("response Body:", len(string(body)))
 }
 
+func BenchmarkMultiAddr(b *testing.B) {
+	url := "https://testapi.bithyve.com/multiaddr"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkMultiAddrNew(b *testing.B) {
+	url := "https://testapi.bithyve.com/multiaddrnew"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
 func BenchmarkBalTx(b *testing.B) {
 	url := "https://testapi.bithyve.com/baltxs"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
@@ -44,6 +68,30 @@ func BenchmarkBalTx(b *testing.B) {
 
 func BenchmarkBalTxNew(b *testing.B) {
 	url := "https://testapi.bithyve.com/baltxsnew"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkMultiGetUtxos(b *testing.B) {
+	url := "https://testapi.bithyve.com/multigetutxos"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkMultiGetUtxosNew(b *testing.B) {
+	url := "https://testapi.bithyve.com/multigetutxosnew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
