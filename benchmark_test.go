@@ -21,13 +21,13 @@ func postRoutine(url string, inputx string) {
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("error: ", err)
 		return
 	}
 
-	log.Println("response Body:", len(string(body)))
+	//log.Println("response Body:", len(string(body)))
 }
 
 func BenchmarkMultiAddr(b *testing.B) {
