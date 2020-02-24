@@ -10,10 +10,10 @@ import (
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
-// MultigetUtxosNew gets the utxos associated with multiple addresses
-func MultigetUtxosNew() {
+// MultigetUtxos gets the utxos associated with multiple addresses
+func MultigetUtxos() {
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetutxosnew", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
@@ -51,10 +51,10 @@ func MultigetUtxosNew() {
 	})
 }
 
-// MultigetAddrNew gets all data associated with a particular address
-func MultigetAddrNew() {
+// MultigetAddr gets all data associated with a particular address
+func MultigetAddr() {
 	// make a curl request out to localhost and get the ping response
-	http.HandleFunc("/multiaddrnew", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
@@ -109,11 +109,11 @@ func MultigetAddrNew() {
 	})
 }
 
-// GetBalAndTxNew combines the balance and Multigetaddr endpoints
-func GetBalAndTxNew() {
+// GetBalAndTx combines the balance and Multigetaddr endpoints
+func GetBalAndTx() {
 
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/baltxsnew", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
@@ -182,10 +182,10 @@ func GetBalAndTxNew() {
 	})
 }
 
-// MultigetBalanceNew gets the net balance associated with multiple addresses
-func MultigetBalanceNew() {
+// MultigetBalance gets the net balance associated with multiple addresses
+func MultigetBalance() {
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetbalancenew", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
@@ -221,10 +221,10 @@ func MultigetBalanceNew() {
 	})
 }
 
-// MultigetTxsNew gets the transactions associated with mutliple addresses
-func MultigetTxsNew() {
+// MultigetTxs gets the transactions associated with mutliple addresses
+func MultigetTxs() {
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigettxsnew", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {

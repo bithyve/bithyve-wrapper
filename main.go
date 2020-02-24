@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -192,122 +191,9 @@ type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
 
-// MultigetBalance gets the net balance associated with multiple addresses
-func MultigetBalance() {
-	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusNotFound)
-		}
-		var rf RequestFormat
-		err = json.Unmarshal(data, &rf)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-		}
-		arr := rf.Addresses
-		balance := float64(0)
-		uBalance := float64(0)
-		for _, elem := range arr {
-			// send the request out
-			tBalance, tUnconfirmedBalance := GetBalanceAddress(w, r, elem)
-			balance += tBalance
-			uBalance += tUnconfirmedBalance
-		}
-		var x MultigetBalanceReturn
-		x.Balance = balance
-		x.UnconfirmedBalance = uBalance
-		erpc.MarshalSend(w, x)
-	})
-}
-
 // TxReturn is used to return Txs
 type TxReturn struct {
 	Txs [][]Tx `json:"Txs"`
-}
-
-// MultigetTxs gets the transactions associated with mutliple addresses
-func MultigetTxs() {
-	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-		}
-		var rf RequestFormat
-		err = json.Unmarshal(data, &rf)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-		}
-		arr := rf.Addresses
-		var result [][]Tx
-		for _, elem := range arr {
-			// send the request out
-			tempTxs, err := GetTxsAddress(w, r, elem)
-			if err != nil {
-				log.Println(err)
-				erpc.ResponseHandler(w, http.StatusInternalServerError)
-				return
-			}
-			result = append(result, tempTxs)
-		}
-		var x TxReturn
-		x.Txs = result
-		erpc.MarshalSend(w, x)
-	})
-}
-
-// MultigetUtxos gets the utxos associated with multiple addresses
-func MultigetUtxos() {
-	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-		}
-		var rf RequestFormat
-		err = json.Unmarshal(data, &rf)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-		}
-		arr := rf.Addresses
-		var result [][]Utxo
-		for _, elem := range arr {
-			// send the request out
-			tempTxs, err := GetUtxosAddress(w, r, elem)
-			if err != nil {
-				log.Println(err)
-				erpc.ResponseHandler(w, http.StatusInternalServerError)
-				return
-			}
-			result = append(result, tempTxs)
-		}
-		erpc.MarshalSend(w, result)
-	})
 }
 
 // MultigetAddrReturn is a structure used for multiple addresses json return
@@ -335,59 +221,6 @@ func CurrentBlockHeight() (float64, error) {
 		return -1, err
 	}
 	return intBn, nil
-}
-
-// MultigetAddr gets all data associated with a particular address
-func MultigetAddr() {
-	// make a curl request out to localhost and get the ping response
-	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			return
-		}
-		var rf RequestFormat
-		err = json.Unmarshal(data, &rf)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			return
-		}
-		arr := rf.Addresses
-		x := make([]MultigetAddrReturn, len(arr))
-		currentBh, err := CurrentBlockHeight()
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			return
-		}
-		for i, elem := range arr {
-			x[i].Address = elem // store the address of the passed elements
-			// send the request out
-			allTxs, err := GetTxsAddress(w, r, elem)
-			if err != nil {
-				continue
-			}
-			x[i].TotalTransactions = float64(len(allTxs))
-			x[i].Transactions = allTxs
-			for j := range x[i].Transactions {
-				if x[i].Transactions[j].Status.Confirmed {
-					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
-				} else {
-					x[i].Transactions[j].NumberofConfirmations = 0
-				}
-			}
-			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
-		}
-		erpc.MarshalSend(w, x)
-	})
 }
 
 // FeeResponse is a struct that is returned when a fee query is made
@@ -495,85 +328,12 @@ type BalTx struct {
 	Transactions []MultigetAddrReturn `json:"Txs"`
 }
 
-// GetBalAndTx combines the balance and Multigetaddr endpoints
-func GetBalAndTx() {
-
-	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println("unable to read body: ", err)
-			erpc.ResponseHandler(w, erpc.StatusNotFound)
-		}
-		var rf RequestFormat
-		err = json.Unmarshal(data, &rf)
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-		}
-		arr := rf.Addresses
-
-		var ret BalTx
-
-		for _, elem := range arr {
-			// send the request out
-			tBalance, tUnconfirmedBalance := 0.0, 0.0
-			tBalance, tUnconfirmedBalance = GetBalanceAddress(w, r, elem)
-			ret.Balance.Balance += tBalance
-			ret.Balance.UnconfirmedBalance += tUnconfirmedBalance
-		}
-
-		// the following call is blocking, so we don't need to add a sleep routine for the
-		// last call above to work
-		x := make([]MultigetAddrReturn, len(arr))
-		currentBh, err := CurrentBlockHeight()
-		if err != nil {
-			log.Println(err)
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			return
-		}
-		for i, elem := range arr {
-			x[i].Address = elem // store the address of the passed elements
-			// send the request out
-			allTxs, err := GetTxsAddress(w, r, elem)
-			if err != nil {
-				continue
-			}
-			x[i].TotalTransactions = float64(len(allTxs))
-			x[i].Transactions = allTxs
-			for j := range x[i].Transactions {
-				if x[i].Transactions[j].Status.Confirmed {
-					x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
-				} else {
-					x[i].Transactions[j].NumberofConfirmations = 0
-				}
-			}
-			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
-		}
-
-		ret.Transactions = x
-		erpc.MarshalSend(w, ret)
-	})
-}
-
 func startHandlers() {
 	MultigetAddr()
 	GetBalAndTx()
 	MultigetUtxos()
 	MultigetBalance()
 	MultigetTxs()
-
-	MultigetAddrNew()
-	GetBalAndTxNew()
-	MultigetUtxosNew()
-	MultigetBalanceNew()
-	MultigetTxsNew()
 
 	erpc.SetupPingHandler()
 	GetFees()

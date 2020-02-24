@@ -125,3 +125,27 @@ func BenchmarkMultiGetBalanceNew(b *testing.B) {
 	}
 	b.StopTimer()
 }
+
+func BenchmarkMultiGetTxs(b *testing.B) {
+	url := "https://testapi.bithyve.com/multigettxs"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
+
+func BenchmarkMultiGetTxsNew(b *testing.B) {
+	url := "https://testapi.bithyve.com/multigettxsnew"
+	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
+
+	log.Println("Called")
+	b.StartTimer()
+	for i := 0; i < 20; i++ {
+		postRoutine(url, input1)
+	}
+	b.StopTimer()
+}
