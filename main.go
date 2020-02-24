@@ -577,15 +577,19 @@ func GetBalAndTx() {
 			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		}
 		arr := rf.Addresses
-		balance := float64(0)
-		uBalance := float64(0)
+
+		var ret BalTx
+
 		for _, elem := range arr {
 			// send the request out
-			tBalance, tUnconfirmedBalance := GetBalanceAddress(w, r, elem)
-			balance += tBalance
-			uBalance += tUnconfirmedBalance
+			tBalance, tUnconfirmedBalance := 0.0, 0.0
+			tBalance, tUnconfirmedBalance = GetBalanceAddress(w, r, elem)
+			ret.Balance.Balance += tBalance
+			ret.Balance.UnconfirmedBalance += tUnconfirmedBalance
 		}
 
+		// the following call is blocking, so we don't need to add a sleep routine for the
+		// last call above to work
 		x := make([]MultigetAddrReturn, len(arr))
 		currentBh, err := CurrentBlockHeight()
 		if err != nil {
@@ -612,9 +616,79 @@ func GetBalAndTx() {
 			x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
 		}
 
+		ret.Transactions = x
+		erpc.MarshalSend(w, ret)
+	})
+}
+
+// GetBalAndTxNew combines the balance and Multigetaddr endpoints
+func GetBalAndTxNew() {
+
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/baltxsnew", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println("unable to read body: ", err)
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		}
+		arr := rf.Addresses
+
 		var ret BalTx
-		ret.Balance.Balance = balance
-		ret.Balance.UnconfirmedBalance = uBalance
+
+		for _, elem := range arr {
+			// send the request out
+			tBalance, tUnconfirmedBalance := 0.0, 0.0
+			go func(elem string) {
+				tBalance, tUnconfirmedBalance = GetBalanceAddress(w, r, elem)
+				ret.Balance.Balance += tBalance
+				ret.Balance.UnconfirmedBalance += tUnconfirmedBalance
+			}(elem)
+		}
+
+		// the following call is blocking, so we don't need to add a sleep routine for the
+		// last call above to work
+		x := make([]MultigetAddrReturn, len(arr))
+		currentBh, err := CurrentBlockHeight()
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			return
+		}
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			// send the request out
+			go func(i int, elem string) {
+				allTxs, err := GetTxsAddress(w, r, elem)
+				if err == nil {
+					x[i].TotalTransactions = float64(len(allTxs))
+					x[i].Transactions = allTxs
+					for j := range x[i].Transactions {
+						if x[i].Transactions[j].Status.Confirmed {
+							x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
+						} else {
+							x[i].Transactions[j].NumberofConfirmations = 0
+						}
+					}
+					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+					go func(i int, elem string) {
+						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
+					}(i, elem)
+				}
+			}(i, elem)
+		}
+		time.Sleep(50 * time.Millisecond)
 		ret.Transactions = x
 		erpc.MarshalSend(w, ret)
 	})
@@ -625,13 +699,14 @@ func startHandlers() {
 	MultigetTxs()
 	MultigetUtxos()
 	MultigetAddr()
+	MultigetAddrNew()
 	erpc.SetupPingHandler()
 	GetFees()
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
 	GetBalAndTx()
-	MultigetAddrNew()
+	GetBalAndTxNew()
 }
 
 func main() {
