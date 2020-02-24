@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	//"strings"
 
@@ -390,6 +391,64 @@ func MultigetAddr() {
 	})
 }
 
+// MultigetAddrNew gets all data associated with a particular address
+func MultigetAddrNew() {
+	// make a curl request out to localhost and get the ping response
+	http.HandleFunc("/multiaddrnew", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			return
+		}
+		var rf RequestFormat
+		err = json.Unmarshal(data, &rf)
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			return
+		}
+		arr := rf.Addresses
+		x := make([]MultigetAddrReturn, len(arr))
+		currentBh, err := CurrentBlockHeight()
+		if err != nil {
+			log.Println(err)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			return
+		}
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			// send the request out
+			go func(i int, elem string) {
+				allTxs, err := GetTxsAddress(w, r, elem)
+				if err == nil {
+					x[i].TotalTransactions = float64(len(allTxs))
+					x[i].Transactions = allTxs
+					for j := range x[i].Transactions {
+						if x[i].Transactions[j].Status.Confirmed {
+							x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
+						} else {
+							x[i].Transactions[j].NumberofConfirmations = 0
+						}
+					}
+					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+					go func(i int, elem string) {
+						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = GetBalanceCount(w, r, elem)
+					}(i, elem)
+				}
+			}(i, elem)
+		}
+		time.Sleep(50 * time.Millisecond)
+		erpc.MarshalSend(w, x)
+	})
+}
+
 // FeeResponse is a struct that is returned when a fee query is made
 type FeeResponse struct {
 	Two              float64 `json:"2"`
@@ -572,6 +631,7 @@ func startHandlers() {
 	RelayTxid()
 	RelayGetRequest()
 	GetBalAndTx()
+	MultigetAddrNew()
 }
 
 func main() {

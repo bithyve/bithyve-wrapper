@@ -36,19 +36,19 @@ func BenchmarkMultiAddr(b *testing.B) {
 
 	log.Println("Called")
 	b.StartTimer()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		postRoutine(url, input1)
 	}
 	b.StopTimer()
 }
 
-func BenchmarkBalTxs(b *testing.B) {
-	url := "https://testapi.bithyve.com/baltxs"
+func BenchmarkMultiAddrNew(b *testing.B) {
+	url := "https://testapi.bithyve.com/multiaddrnew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
 	b.StartTimer()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 20; i++ {
 		postRoutine(url, input1)
 	}
 	b.StopTimer()
