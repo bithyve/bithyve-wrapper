@@ -21,21 +21,21 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	var arr []string
 	err := erpc.CheckPost(w, r) // check origin of request as well if needed
 	if err != nil {
-		log.Println(err)
 		erpc.ResponseHandler(w, erpc.StatusNotFound)
+		log.Println(err)
 		return arr, err
 	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
 		erpc.ResponseHandler(w, erpc.StatusBadRequest)
+		log.Println(err)
 		return arr, err
 	}
 	var rf format.RequestFormat
 	err = json.Unmarshal(data, &rf)
 	if err != nil {
-		log.Println(err)
 		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		log.Println(err)
 		return arr, err
 	}
 
@@ -49,8 +49,8 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 	x := make([]format.MultigetAddrReturn, len(arr))
 	currentBh, err := electrs.CurrentBlockHeight()
 	if err != nil {
-		log.Println(err)
 		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		log.Println(err)
 		return x, err
 	}
 
@@ -62,18 +62,21 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 			if err == nil {
 				x[i].TotalTransactions = float64(len(allTxs))
 				x[i].Transactions = allTxs
+				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
 				for j := range x[i].Transactions {
 					if x[i].Transactions[j].Status.Confirmed {
-						x[i].Transactions[j].NumberofConfirmations = currentBh - x[i].Transactions[j].Status.BlockHeight
+						x[i].Transactions[j].NumberofConfirmations =
+							currentBh - x[i].Transactions[j].Status.BlockHeight
 					} else {
 						x[i].Transactions[j].NumberofConfirmations = 0
 					}
 				}
-				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
 				go func(i int, elem string) {
 					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 						electrs.GetBalanceCount(w, r, elem)
 				}(i, elem)
+			} else {
+				log.Println("error in gettxsaddress call: ", err)
 			}
 		}(i, elem)
 	}
@@ -101,7 +104,7 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 // MultiUtxos gets the utxos associated with multiple addresses
 func MultiUtxos() {
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/utxos", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
@@ -114,8 +117,8 @@ func MultiUtxos() {
 			go func(elem string) {
 				tempTxs, err := electrs.GetUtxosAddress(w, r, elem)
 				if err != nil {
-					log.Println(err)
 					erpc.ResponseHandler(w, http.StatusInternalServerError)
+					log.Println(err)
 					return
 				}
 				result = append(result, tempTxs)
@@ -129,7 +132,7 @@ func MultiUtxos() {
 // MultiData gets all data associated with a particular address
 func MultiData() {
 	// make a curl request out to localhost and get the ping response
-	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/data", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
@@ -168,7 +171,7 @@ func MultiBalTxs() {
 // MultiBalances gets the net balance associated with multiple addresses
 func MultiBalances() {
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/balances", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
@@ -183,7 +186,7 @@ func MultiBalances() {
 // MultiTxs gets the transactions associated with mutliple addresses
 func MultiTxs() {
 	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/txs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
@@ -196,8 +199,8 @@ func MultiTxs() {
 			go func(elem string) {
 				tempTxs, err := electrs.GetTxsAddress(w, r, elem)
 				if err != nil {
-					log.Println(err)
 					erpc.ResponseHandler(w, http.StatusInternalServerError)
+					log.Println(err)
 					return
 				}
 				x.Txs = append(x.Txs, tempTxs)
@@ -228,7 +231,7 @@ func GetFees() {
 // PostTx posts a transaction to the blockchain
 func PostTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
+		// validate if the person requesting this is a valid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
 			log.Println(err)

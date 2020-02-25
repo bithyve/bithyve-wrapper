@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/bithyve/bithyve-wrapper/format"
 
 	erpc "github.com/Varunram/essentials/rpc"
+	"github.com/Varunram/essentials/utils"
 )
 
 // ElectrsURL is the URL of a running electrs instance
@@ -23,13 +23,7 @@ func CurrentBlockHeight() (float64, error) {
 		return -1, err
 	}
 
-	// now the data needs to be converted into an integer ie string to float
-	stringBn := string(data)
-	intBn, err := strconv.ParseFloat(stringBn, 32)
-	if err != nil {
-		return -1, err
-	}
-	return intBn, nil
+	return utils.ToFloat(data)
 }
 
 // GetBalanceCount gets the total incoming balance
@@ -67,7 +61,8 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 		return -1, -1
 	}
 
-	return x.ChainStats.FundedTxoSum - x.ChainStats.SpentTxoSum, x.MempoolStats.FundedTxoSum - x.MempoolStats.SpentTxoSum
+	return x.ChainStats.FundedTxoSum - x.ChainStats.SpentTxoSum,
+		x.MempoolStats.FundedTxoSum - x.MempoolStats.SpentTxoSum
 }
 
 // GetTxsAddress gets the transactions associated with a given address
