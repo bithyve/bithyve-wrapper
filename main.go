@@ -10,11 +10,11 @@ import (
 )
 
 func startHandlers() {
-	MultigetAddr()
-	GetBalAndTx()
-	MultigetUtxos()
-	MultigetBalance()
-	MultigetTxs()
+	MultiData()
+	MultiBalTxs()
+	MultiUtxos()
+	MultiBalances()
+	MultiTxs()
 
 	erpc.SetupPingHandler()
 	GetFees()

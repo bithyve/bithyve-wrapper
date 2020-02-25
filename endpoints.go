@@ -13,12 +13,16 @@ import (
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
+func wait() {
+	time.Sleep(50 * time.Millisecond)
+}
+
 func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	var arr []string
 	err := erpc.CheckPost(w, r) // check origin of request as well if needed
 	if err != nil {
 		log.Println(err)
-		erpc.ResponseHandler(w, erpc.StatusBadRequest)
+		erpc.ResponseHandler(w, erpc.StatusNotFound)
 		return arr, err
 	}
 	data, err := ioutil.ReadAll(r.Body)
@@ -37,34 +41,6 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 
 	arr = rf.Addresses
 	return arr, nil
-}
-
-// MultigetUtxos gets the utxos associated with multiple addresses
-func MultigetUtxos() {
-	// make a curl request out to lcoalhost and get the ping response
-	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		arr, err := checkReq(w, r)
-		if err != nil {
-			return
-		}
-
-		var result [][]format.Utxo
-		for _, elem := range arr {
-			// send the request out
-			go func(elem string) {
-				tempTxs, err := electrs.GetUtxosAddress(w, r, elem)
-				if err != nil {
-					log.Println(err)
-					erpc.ResponseHandler(w, http.StatusInternalServerError)
-					return
-				}
-				result = append(result, tempTxs)
-			}(elem)
-		}
-		time.Sleep(50 * time.Millisecond)
-		erpc.MarshalSend(w, result)
-	})
 }
 
 func multiAddr(w http.ResponseWriter, r *http.Request,
@@ -102,12 +78,56 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 		}(i, elem)
 	}
 
-	time.Sleep(50 * time.Millisecond)
+	wait()
 	return x, nil
 }
 
-// MultigetAddr gets all data associated with a particular address
-func MultigetAddr() {
+func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.BalanceReturn {
+	var x format.BalanceReturn
+	for _, elem := range arr {
+		// send the request out
+		tBalance, tUnconfirmedBalance := 0.0, 0.0
+		go func(elem string) {
+			tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(w, r, elem)
+			x.Balance += tBalance
+			x.UnconfirmedBalance += tUnconfirmedBalance
+		}(elem)
+	}
+
+	wait()
+	return x
+}
+
+// MultiUtxos gets the utxos associated with multiple addresses
+func MultiUtxos() {
+	// make a curl request out to lcoalhost and get the ping response
+	http.HandleFunc("/multigetutxos", func(w http.ResponseWriter, r *http.Request) {
+		// validate if the person requesting this is a vlaid user on the platform
+		arr, err := checkReq(w, r)
+		if err != nil {
+			return
+		}
+
+		var result [][]format.Utxo
+		for _, elem := range arr {
+			// send the request out
+			go func(elem string) {
+				tempTxs, err := electrs.GetUtxosAddress(w, r, elem)
+				if err != nil {
+					log.Println(err)
+					erpc.ResponseHandler(w, http.StatusInternalServerError)
+					return
+				}
+				result = append(result, tempTxs)
+			}(elem)
+		}
+		wait()
+		erpc.MarshalSend(w, result)
+	})
+}
+
+// MultiData gets all data associated with a particular address
+func MultiData() {
 	// make a curl request out to localhost and get the ping response
 	http.HandleFunc("/multiaddr", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -125,8 +145,8 @@ func MultigetAddr() {
 	})
 }
 
-// GetBalAndTx combines the balance and Multigetaddr endpoints
-func GetBalAndTx() {
+// MultiBalTxs combines the balance and Multigetaddr endpoints
+func MultiBalTxs() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
 		arr, err := checkReq(w, r)
@@ -134,7 +154,7 @@ func GetBalAndTx() {
 			return
 		}
 
-		var ret format.BalTx
+		var ret format.BalTxReturn
 		ret.Balance = multiBalance(arr, w, r)
 		ret.Transactions, err = multiAddr(w, r, arr)
 		if err != nil {
@@ -145,24 +165,8 @@ func GetBalAndTx() {
 	})
 }
 
-func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.MultigetBalanceReturn {
-	var x format.MultigetBalanceReturn
-	for _, elem := range arr {
-		// send the request out
-		tBalance, tUnconfirmedBalance := 0.0, 0.0
-		go func(elem string) {
-			tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(w, r, elem)
-			x.Balance += tBalance
-			x.UnconfirmedBalance += tUnconfirmedBalance
-		}(elem)
-	}
-
-	time.Sleep(50 * time.Millisecond)
-	return x
-}
-
-// MultigetBalance gets the net balance associated with multiple addresses
-func MultigetBalance() {
+// MultiBalances gets the net balance associated with multiple addresses
+func MultiBalances() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigetbalance", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -171,15 +175,13 @@ func MultigetBalance() {
 			return
 		}
 
-		var x format.MultigetBalanceReturn
-		x = multiBalance(arr, w, r)
-
+		x := multiBalance(arr, w, r)
 		erpc.MarshalSend(w, x)
 	})
 }
 
-// MultigetTxs gets the transactions associated with mutliple addresses
-func MultigetTxs() {
+// MultiTxs gets the transactions associated with mutliple addresses
+func MultiTxs() {
 	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/multigettxs", func(w http.ResponseWriter, r *http.Request) {
 		// validate if the person requesting this is a vlaid user on the platform
@@ -202,7 +204,7 @@ func MultigetTxs() {
 			}(elem)
 		}
 
-		time.Sleep(50 * time.Millisecond)
+		wait()
 		erpc.MarshalSend(w, x)
 	})
 }
