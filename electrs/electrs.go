@@ -41,7 +41,7 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 		return -1, -1
 	}
 	// now data is in byte, we need the other structure now
-	var x GetBalanceFormat
+	var x format.Balance
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
@@ -60,7 +60,7 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 		return -1, -1
 	}
 	// now data is in byte, we need the other structure now
-	var x GetBalanceFormat
+	var x format.Balance
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)

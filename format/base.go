@@ -5,8 +5,8 @@ type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
 
-// GetBalanceFormat is a struct that us used to get the blanace from esplora
-type GetBalanceFormat struct {
+// Balance is a copy of the struct esplora returns for balances
+type Balance struct {
 	Address    string `json:"address"`
 	ChainStats struct {
 		FundedTxoCount float64 `json:"funded_txo_count"`
@@ -22,26 +22,6 @@ type GetBalanceFormat struct {
 		SpentTxoSum    float64 `json:"spent_txo_sum"`
 		TxCount        float64 `json:"tx_count"`
 	} `json:"mempool_stats"`
-}
-
-// TxReturn is used to return Txs
-type TxReturn struct {
-	Txs [][]Tx `json:"Txs"`
-}
-
-// MultigetBalanceReturn is a structure that is used for getting multiple balances
-type MultigetBalanceReturn struct {
-	Balance            float64
-	UnconfirmedBalance float64
-}
-
-// MultigetAddrReturn is a structure used for multiple addresses json return
-type MultigetAddrReturn struct {
-	TotalTransactions       float64
-	ConfirmedTransactions   float64
-	UnconfirmedTransactions float64
-	Transactions            []Tx
-	Address                 string
 }
 
 // UtxoVout is a structure for output utxos
@@ -120,10 +100,4 @@ type FeeResponse struct {
 	OneFourFour      float64 `json:"144"`
 	FiveZeroFour     float64 `json:"504"`
 	OneThousandEight float64 `json:"1008"`
-}
-
-// BalTx is a struct used for the baltxs endpoint
-type BalTx struct {
-	Balance      MultigetBalanceReturn
-	Transactions []MultigetAddrReturn `json:"Txs"`
 }

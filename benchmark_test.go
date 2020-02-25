@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+// use this function if you're writing some new endpoints which improve performance
+// the new endpoint should be at /new so we can compare benchmarks directly without
+// having to run both separately
+
 func postRoutine(url string, inputx string) {
 	input := []byte(inputx)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(input))
