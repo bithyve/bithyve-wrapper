@@ -17,6 +17,7 @@ func RelayTxid() {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
+			erpc.ResponseHandler(w, http.StatusNotFound)
 			log.Println(err)
 			return
 		}
@@ -38,6 +39,7 @@ func RelayGetRequest() {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckGet(w, r) // check origin of request as well if needed
 		if err != nil {
+			erpc.ResponseHandler(w, http.StatusNotFound)
 			log.Println(err)
 			return
 		}
@@ -45,8 +47,8 @@ func RelayGetRequest() {
 		body := electrs.ElectrsURL + "" + r.URL.String()
 		data, err := erpc.GetRequest(body)
 		if err != nil {
-			log.Println("could not submit transacation to testnet, quitting")
 			erpc.ResponseHandler(w, http.StatusInternalServerError)
+			log.Println("could not submit transacation to testnet, quitting")
 			return
 		}
 

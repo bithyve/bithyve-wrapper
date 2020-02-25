@@ -69,7 +69,6 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]format.Tx, error) {
 	var x []format.Tx
 	body := ElectrsURL + "/address/" + addr + "/txs"
-	log.Println(body)
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -89,14 +88,11 @@ func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]forma
 func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]format.Utxo, error) {
 	var x []format.Utxo
 	body := ElectrsURL + "/address/" + addr + "/utxo"
-	log.Println(body)
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
 		return nil, err
 	}
-	// now data is in byte, we need the other structure now
-	log.Println(string(data))
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)

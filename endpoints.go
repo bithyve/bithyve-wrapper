@@ -218,6 +218,7 @@ func GetFees() {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
 			log.Println(err)
 			return
 		}
@@ -234,19 +235,22 @@ func PostTx() {
 		// validate if the person requesting this is a valid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
+			erpc.ResponseHandler(w, erpc.StatusNotFound)
 			log.Println(err)
 			return
 		}
 		body := electrs.ElectrsURL + "/tx"
 		data, err := erpc.PostRequest(body, r.Body)
 		if err != nil {
-			log.Println("could not submit transacation to testnet, quitting")
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			log.Println("could not submit transacation to testnet: ", err)
+			return
 		}
 		var x interface{}
 		err = json.Unmarshal(data, &x)
 		if err != nil {
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 			log.Println("error while unmarshalling json struct", string(data))
-			w.Write(data)
 			return
 		}
 		erpc.MarshalSend(w, x)
