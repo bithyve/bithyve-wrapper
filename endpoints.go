@@ -14,7 +14,7 @@ import (
 )
 
 func wait() {
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 }
 
 func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
@@ -91,6 +91,7 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 		// send the request out
 		tBalance, tUnconfirmedBalance := 0.0, 0.0
 		go func(elem string) {
+			log.Println("calling the balances endpoint")
 			tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(w, r, elem)
 			x.Balance += tBalance
 			x.UnconfirmedBalance += tUnconfirmedBalance

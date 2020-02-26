@@ -29,6 +29,7 @@ func CurrentBlockHeight() (float64, error) {
 // GetBalanceCount gets the total incoming balance
 func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
+	log.Println("CALLING ELECTRS: ", string(body))
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -42,12 +43,14 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 		return -1, -1
 	}
 
+	log.Println("X- ", x, string(data))
 	return x.ChainStats.FundedTxoCount, x.MempoolStats.FundedTxoCount
 }
 
 // GetBalanceAddress gets the net balance of an address
 func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
+	log.Println("CALLING ELECTRS: ", string(body))
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -61,6 +64,7 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 		return -1, -1
 	}
 
+	log.Println("X- ", x, string(data))
 	return x.ChainStats.FundedTxoSum - x.ChainStats.SpentTxoSum,
 		x.MempoolStats.FundedTxoSum - x.MempoolStats.SpentTxoSum
 }

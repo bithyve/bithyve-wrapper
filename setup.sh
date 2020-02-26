@@ -6,8 +6,8 @@ sudo apt-get -y upgrade
 sudo apt-get install build-essential
 
 # Install Go
-wget https://dl.google.com/go/go1.12.6.linux-amd64.tar.gz
-sudo tar -xvf go1.12.6.linux-amd64.tar.gz
+wget https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
+sudo tar -xvf go1.13.8.linux-amd64.tar.gz
 sudo mv go /usr/local
 
 # set GO variables
@@ -22,18 +22,19 @@ source $HOME/.cargo/env
 cargo version
 
 # Get and Run bitcoind
-wget https://bitcoincore.org/bin/bitcoin-core-0.18.0/bitcoin-0.18.0-x86_64-linux-gnu.tar.gz
-tar -xvf bitcoin-0.18.0-x86_64-linux-gnu.tar.gz
-cd bitcoin-0.18.0/bin
+wget https://bitcoincore.org/bin/bitcoin-core-0.19.0.1/bitcoin-0.19.0.1-x86_64-linux-gnu.tar.gz
+tar -xvf bitcoin-0.19.0.1-x86_64-linux-gnu.tar.gz
+cd bitcoin-0.19.0.1/bin
 mv bitcoind /usr/local/ # or wherever you would like to have bitcoind
 bitcoind -daemon -testnet # start bitcoind on testnet or mainnet
 
 # Clone, build and run electrs
 git clone -b new-index https://github.com/Blockstream/electrs.git
 cd electrs
+sudo apt-get install libclang-dev
+sudo apt-get install clang 
 # change below parameters based on your bitcoind parameters
 screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir ~/.bitcoin --cookie=username:password --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
-
 # Go get and build the Bithyve Wrapper
 go get github.com/bithyve/bithyve-wrapper
 cd ~/go/src/github.com/bithyve/bithyve-wrapper
@@ -50,4 +51,4 @@ go build
 screen -SL wrapper ./bithyve-wrapper
 
 sudo screen -SL socat443 socat tcp-listen:443,reuseaddr,fork tcp:localhost:445 # 445-443 for the wrapper
-sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001 # 3001-80 for electrs
+sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001 # 3001-80 for electrsn
