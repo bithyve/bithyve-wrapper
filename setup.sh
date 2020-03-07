@@ -40,15 +40,15 @@ go get github.com/bithyve/bithyve-wrapper
 cd ~/go/src/github.com/bithyve/bithyve-wrapper
 
 # Get an SSL certificate
-sudo certbot certonly --standalone --preferred-challenges http-01 -d <host_name>
-sudo cd /etc/letsencrypt/live/<host_name>
+sudo certbot certonly --standalone --preferred-challenges http-01 -d api.bithyve.com
+sudo cd /etc/letsencrypt/live/api.bithyve.com
 cp fullchain.pem server.crt ; cp privkey.pem server.key ; mv server.* ~/go/src/github.com/bithyve/bithyve-wrapper/ssl/
 
 # Run the bithyve wrapper
 cd ~/go/src/github.com/bithyve/bithyve-wrapper
 go get ./...
 go build
-screen -SL wrapper ./bithyve-wrapper
+sudo screen -SL wrapper ./bithyve-wrapper
 
 sudo screen -SL socat443 socat tcp-listen:443,reuseaddr,fork tcp:localhost:445 # 445-443 for the wrapper
 sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001 # 3001-80 for electrsn

@@ -14,6 +14,11 @@ import (
 // ElectrsURL is the URL of a running electrs instance
 var ElectrsURL = "http://testapi.bithyve.com"
 
+// SetMainnet is the URL of a running mainnet electrs instance
+func SetMainnet() {
+	ElectrsURL = "http://api.bithyve.com"
+}
+
 // CurrentBlockHeight gets the current block height from the blockchain
 func CurrentBlockHeight() (float64, error) {
 	body := ElectrsURL + "/blocks/tip/height"
