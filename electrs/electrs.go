@@ -3,7 +3,6 @@ package electrs
 import (
 	"encoding/json"
 	"log"
-	"net/http"
 
 	"github.com/bithyve/bithyve-wrapper/format"
 
@@ -32,9 +31,8 @@ func CurrentBlockHeight() (float64, error) {
 }
 
 // GetBalanceCount gets the total incoming balance
-func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
+func GetBalanceCount(addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
-	log.Println("CALLING ELECTRS: ", string(body))
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -53,9 +51,8 @@ func GetBalanceCount(w http.ResponseWriter, r *http.Request, addr string) (float
 }
 
 // GetBalanceAddress gets the net balance of an address
-func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (float64, float64) {
+func GetBalanceAddress(addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
-	log.Println("CALLING ELECTRS: ", string(body))
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
@@ -69,13 +66,12 @@ func GetBalanceAddress(w http.ResponseWriter, r *http.Request, addr string) (flo
 		return -1, -1
 	}
 
-	log.Println("X- ", x, string(data))
 	return x.ChainStats.FundedTxoSum - x.ChainStats.SpentTxoSum,
 		x.MempoolStats.FundedTxoSum - x.MempoolStats.SpentTxoSum
 }
 
 // GetTxsAddress gets the transactions associated with a given address
-func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]format.Tx, error) {
+func GetTxsAddress(addr string) ([]format.Tx, error) {
 	var x []format.Tx
 	body := ElectrsURL + "/address/" + addr + "/txs"
 	data, err := erpc.GetRequest(body)
@@ -94,7 +90,7 @@ func GetTxsAddress(w http.ResponseWriter, r *http.Request, addr string) ([]forma
 }
 
 // GetUtxosAddress gets the utxos associated with a given address
-func GetUtxosAddress(w http.ResponseWriter, r *http.Request, addr string) ([]format.Utxo, error) {
+func GetUtxosAddress(addr string) ([]format.Utxo, error) {
 	var x []format.Utxo
 	body := ElectrsURL + "/address/" + addr + "/utxo"
 	data, err := erpc.GetRequest(body)
