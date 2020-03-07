@@ -40,7 +40,19 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	}
 
 	arr = rf.Addresses
-	return arr, nil
+
+	// filter through list to remove duplicates
+	nodupsMap := make(map[string]bool)
+	var nodups []string
+
+	for _, elem := range arr {
+		if _, value := nodupsMap[elem]; !value {
+			nodupsMap[elem] = true
+			nodups = append(nodups, elem)
+		}
+	}
+
+	return nodups, nil
 }
 
 func multiAddr(w http.ResponseWriter, r *http.Request,
