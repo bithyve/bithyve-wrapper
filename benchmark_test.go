@@ -12,6 +12,8 @@ import (
 // the new endpoint should be at /new so we can compare benchmarks directly without
 // having to run both separately
 
+var APIURL = "https://testapi.bithyve.com"
+
 func postRoutine(url string, inputx string) {
 	input := []byte(inputx)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(input))
@@ -35,7 +37,7 @@ func postRoutine(url string, inputx string) {
 }
 
 func BenchmarkMultiAddr(b *testing.B) {
-	url := "https://testapi.bithyve.com/multiaddr"
+	url := APIURL + "/multiaddr"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -47,7 +49,7 @@ func BenchmarkMultiAddr(b *testing.B) {
 }
 
 func BenchmarkMultiAddrNew(b *testing.B) {
-	url := "https://testapi.bithyve.com/multiaddrnew"
+	url := APIURL + "/multiaddrnew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -59,7 +61,7 @@ func BenchmarkMultiAddrNew(b *testing.B) {
 }
 
 func BenchmarkBalTx(b *testing.B) {
-	url := "https://testapi.bithyve.com/baltxs"
+	url := APIURL + "/baltxs"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -71,7 +73,7 @@ func BenchmarkBalTx(b *testing.B) {
 }
 
 func BenchmarkBalTxNew(b *testing.B) {
-	url := "https://testapi.bithyve.com/baltxsnew"
+	url := APIURL + "/baltxsnew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -83,7 +85,7 @@ func BenchmarkBalTxNew(b *testing.B) {
 }
 
 func BenchmarkMultiGetUtxos(b *testing.B) {
-	url := "https://testapi.bithyve.com/multigetutxos"
+	url := APIURL + "/multigetutxos"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -95,7 +97,7 @@ func BenchmarkMultiGetUtxos(b *testing.B) {
 }
 
 func BenchmarkMultiGetUtxosNew(b *testing.B) {
-	url := "https://testapi.bithyve.com/multigetutxosnew"
+	url := APIURL + "/multigetutxosnew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -107,7 +109,7 @@ func BenchmarkMultiGetUtxosNew(b *testing.B) {
 }
 
 func BenchmarkMultiGetBalance(b *testing.B) {
-	url := "https://testapi.bithyve.com/multigetbalancenew"
+	url := APIURL + "/multigetbalancenew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -119,7 +121,7 @@ func BenchmarkMultiGetBalance(b *testing.B) {
 }
 
 func BenchmarkMultiGetBalanceNew(b *testing.B) {
-	url := "https://testapi.bithyve.com/multigetbalancenew"
+	url := APIURL + "/multigetbalancenew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -131,7 +133,7 @@ func BenchmarkMultiGetBalanceNew(b *testing.B) {
 }
 
 func BenchmarkMultiGetTxs(b *testing.B) {
-	url := "https://testapi.bithyve.com/multigettxs"
+	url := APIURL + "/multigettxs"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
@@ -143,7 +145,7 @@ func BenchmarkMultiGetTxs(b *testing.B) {
 }
 
 func BenchmarkMultiGetTxsNew(b *testing.B) {
-	url := "https://testapi.bithyve.com/multigettxsnew"
+	url := APIURL + "/multigettxsnew"
 	input1 := `{"addresses":["2MsxyDNd4kMiRxi8PbXVPvuk526fAWRAaSD", "2N7dRtWLBJgC7QdmEaSLNyiJtfrnvJtanMb"]}`
 
 	log.Println("Called")
