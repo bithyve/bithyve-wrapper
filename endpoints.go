@@ -14,7 +14,7 @@ import (
 )
 
 func wait() {
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(25 * time.Millisecond)
 }
 
 func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
@@ -68,10 +68,9 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 
 	for i, elem := range arr {
 		x[i].Address = elem // store the address of the passed elements
-		// send the request out
-		go func(i int, elem string) {
-			allTxs, err := electrs.GetTxsAddress(elem)
-			if err == nil {
+		allTxs, err := electrs.GetTxsAddress(elem)
+		if err == nil {
+			go func(i int, elem string, allTxs []format.Tx) {
 				x[i].TotalTransactions = float64(len(allTxs))
 				x[i].Transactions = allTxs
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
@@ -87,10 +86,10 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 						electrs.GetBalanceCount(elem)
 				}(i, elem)
-			} else {
-				log.Println("error in gettxsaddress call: ", err)
-			}
-		}(i, elem)
+			}(i, elem, allTxs)
+		} else {
+			log.Println("error in gettxsaddress call: ", err)
+		}
 	}
 
 	wait()
@@ -200,15 +199,13 @@ func MultiTxs() {
 		var x format.TxReturn
 		for _, elem := range arr {
 			// send the request out
-			go func(elem string) {
-				tempTxs, err := electrs.GetTxsAddress(elem)
-				if err != nil {
-					erpc.ResponseHandler(w, http.StatusInternalServerError)
-					log.Println(err)
-					return
-				}
-				x.Txs = append(x.Txs, tempTxs)
-			}(elem)
+			tempTxs, err := electrs.GetTxsAddress(elem)
+			if err != nil {
+				erpc.ResponseHandler(w, http.StatusInternalServerError)
+				log.Println(err)
+				return
+			}
+			x.Txs = append(x.Txs, tempTxs)
 		}
 
 		wait()
