@@ -19,7 +19,7 @@ func wait() {
 
 func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	var arr []string
-	err := erpc.CheckPost(w, r) // check origin of request as well if needed
+	err := erpc.CheckPost(w, r)
 	if err != nil {
 		erpc.ResponseHandler(w, erpc.StatusNotFound)
 		log.Println(err)
@@ -116,9 +116,7 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 
 // MultiUtxos gets the utxos associated with multiple addresses
 func MultiUtxos() {
-	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/utxos", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -144,9 +142,7 @@ func MultiUtxos() {
 
 // MultiData gets all data associated with a particular address
 func MultiData() {
-	// make a curl request out to localhost and get the ping response
 	http.HandleFunc("/data", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -161,9 +157,8 @@ func MultiData() {
 	})
 }
 
-// MultiBalTxs combines the balance and Multigetaddr endpoints
+// MultiBalTxs combines the balance and multiaddr endpoints
 func MultiBalTxs() {
-	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
 		arr, err := checkReq(w, r)
 		if err != nil {
@@ -183,9 +178,7 @@ func MultiBalTxs() {
 
 // MultiBalances gets the net balance associated with multiple addresses
 func MultiBalances() {
-	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/balances", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -196,11 +189,9 @@ func MultiBalances() {
 	})
 }
 
-// MultiTxs gets the transactions associated with mutliple addresses
+// MultiTxs gets the transactions associated with multiple addresses
 func MultiTxs() {
-	// make a curl request out to lcoalhost and get the ping response
 	http.HandleFunc("/txs", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -225,11 +216,10 @@ func MultiTxs() {
 	})
 }
 
-// GetFees gets the current fee estimate from esplora
+// GetFees gets the current fee estimate from electrs
 func GetFees() {
 	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r)
 		if err != nil {
 			erpc.ResponseHandler(w, erpc.StatusNotFound)
 			log.Println(err)
@@ -242,11 +232,10 @@ func GetFees() {
 	})
 }
 
-// PostTx posts a transaction to the blockchain
+// PostTx posts a transaction to the blockchain via electrs
 func PostTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a valid user on the platform
-		err := erpc.CheckPost(w, r) // check origin of request as well if needed
+		err := erpc.CheckPost(w, r)
 		if err != nil {
 			erpc.ResponseHandler(w, erpc.StatusNotFound)
 			log.Println(err)
