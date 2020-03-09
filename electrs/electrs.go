@@ -36,17 +36,16 @@ func GetBalanceCount(addr string) (float64, float64) {
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
-		return -1, -1
+		return 0, 0
 	}
 	// now data is in byte, we need the other structure now
 	var x format.Balance
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
-		return -1, -1
+		return 0, 0
 	}
 
-	log.Println("X- ", x, string(data))
 	return x.ChainStats.FundedTxoCount, x.MempoolStats.FundedTxoCount
 }
 
@@ -56,14 +55,14 @@ func GetBalanceAddress(addr string) (float64, float64) {
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("did not get response", err)
-		return -1, -1
+		return 0, 0
 	}
 	// now data is in byte, we need the other structure now
 	var x format.Balance
 	err = json.Unmarshal(data, &x)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
-		return -1, -1
+		return 0, 0
 	}
 
 	return x.ChainStats.FundedTxoSum - x.ChainStats.SpentTxoSum,
