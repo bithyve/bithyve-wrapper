@@ -226,9 +226,14 @@ func GetFees() {
 			return
 		}
 
-		var x format.FeeResponse
-		body := electrs.ElectrsURL + "/fee-estimates"
-		erpc.GetAndSendJson(w, body, x)
+		x, err := electrs.GetFeeEstimates()
+		if err != nil {
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			log.Println(err)
+			return
+		}
+
+		erpc.MarshalSend(w, x)
 	})
 }
 
@@ -241,20 +246,14 @@ func PostTx() {
 			log.Println(err)
 			return
 		}
-		body := electrs.ElectrsURL + "/tx"
-		data, err := erpc.PostRequest(body, r.Body)
+
+		x, err := electrs.PostTx(r.Body)
 		if err != nil {
 			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			log.Println("could not submit transacation to testnet: ", err)
+			log.Println(err)
 			return
 		}
-		var x interface{}
-		err = json.Unmarshal(data, &x)
-		if err != nil {
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			log.Println("error while unmarshalling json struct", string(data))
-			return
-		}
+
 		erpc.MarshalSend(w, x)
 	})
 }

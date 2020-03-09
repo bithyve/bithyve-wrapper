@@ -94,9 +94,11 @@ type FeeResponse struct {
 	Two              float64 `json:"2"`
 	Three            float64 `json:"3"`
 	Four             float64 `json:"4"`
+	Five             float64 `json:"5"`
 	Six              float64 `json:"6"`
 	Ten              float64 `json:"10"`
 	Twenty           float64 `json:"20"`
+	TwentyFive       float64 `json:"25"`
 	OneFourFour      float64 `json:"144"`
 	FiveZeroFour     float64 `json:"504"`
 	OneThousandEight float64 `json:"1008"`

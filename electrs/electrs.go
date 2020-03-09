@@ -2,6 +2,7 @@ package electrs
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 
 	"github.com/bithyve/bithyve-wrapper/format"
@@ -13,9 +14,13 @@ import (
 // ElectrsURL is the URL of a running electrs instance
 var ElectrsURL = "http://testapi.bithyve.com"
 
+// FallbackURL is the URL of a fallback electrs instance
+var FallbackURL = "https://blockstream.info/testnet/api"
+
 // SetMainnet is the URL of a running mainnet electrs instance
 func SetMainnet() {
 	ElectrsURL = "http://api.bithyve.com"
+	FallbackURL = "https://blockstream.info/api"
 }
 
 // CurrentBlockHeight gets the current block height from the blockchain
@@ -23,8 +28,13 @@ func CurrentBlockHeight() (float64, error) {
 	body := ElectrsURL + "/blocks/tip/height"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
-		log.Println("did not get response", err)
-		return -1, err
+		log.Println("calling fallback URL")
+		body = FallbackURL + "/blocks/tip/height"
+		data, err = erpc.GetRequest(body)
+		if err != nil {
+			log.Println("did not get response", err)
+			return -1, err
+		}
 	}
 
 	return utils.ToFloat(data)
@@ -35,8 +45,13 @@ func GetBalanceCount(addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
 	data, err := erpc.GetRequest(body)
 	if err != nil {
-		log.Println("did not get response", err)
-		return 0, 0
+		log.Println("calling fallback URL")
+		body := FallbackURL + "/address/" + addr
+		data, err = erpc.GetRequest(body)
+		if err != nil {
+			log.Println("did not get response", err)
+			return 0, 0
+		}
 	}
 	// now data is in byte, we need the other structure now
 	var x format.Balance
@@ -54,8 +69,13 @@ func GetBalanceAddress(addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
 	data, err := erpc.GetRequest(body)
 	if err != nil {
-		log.Println("did not get response", err)
-		return 0, 0
+		log.Println("calling fallback URL")
+		body := FallbackURL + "/address/" + addr
+		data, err = erpc.GetRequest(body)
+		if err != nil {
+			log.Println("did not get response", err)
+			return 0, 0
+		}
 	}
 	// now data is in byte, we need the other structure now
 	var x format.Balance
@@ -75,8 +95,14 @@ func GetTxsAddress(addr string) ([]format.Tx, error) {
 	body := ElectrsURL + "/address/" + addr + "/txs"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
-		log.Println("did not get response", err)
-		return x, err
+		log.Println("calling fallback URL")
+		body := FallbackURL + "/address/" + addr + "/txs"
+		data, err = erpc.GetRequest(body)
+		if err != nil {
+			log.Println("did not get response", err)
+			return x, err
+
+		}
 	}
 	// now data is in byte, we need the other structure now
 	err = json.Unmarshal(data, &x)
@@ -94,8 +120,13 @@ func GetUtxosAddress(addr string) ([]format.Utxo, error) {
 	body := ElectrsURL + "/address/" + addr + "/utxo"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
-		log.Println("did not get response", err)
-		return nil, err
+		log.Println("calling fallback URL")
+		body := FallbackURL + "/address/" + addr + "/utxo"
+		data, err = erpc.GetRequest(body)
+		if err != nil {
+			log.Println("did not get response", err)
+			return nil, err
+		}
 	}
 	err = json.Unmarshal(data, &x)
 	if err != nil {
@@ -107,4 +138,39 @@ func GetUtxosAddress(addr string) ([]format.Utxo, error) {
 		x[i].Address = addr
 	}
 	return x, nil
+}
+
+// GetFeeEstimates gets the fee estimates in the following blocks
+func GetFeeEstimates() (format.FeeResponse, error) {
+	var x format.FeeResponse
+	body := ElectrsURL + "/fee-estimates"
+	data, err := erpc.GetRequest(body)
+	if err != nil {
+		body = FallbackURL + "/fee-estimates"
+		data, err = erpc.GetRequest(body)
+		if err != nil {
+			log.Println(err)
+			return x, err
+		}
+	}
+
+	err = json.Unmarshal(data, &x)
+	return x, err
+}
+
+// PostTx posts a tx to the blockchain
+func PostTx(content io.Reader) (interface{}, error) {
+	var x interface{}
+	body := ElectrsURL + "/tx"
+	data, err := erpc.PostRequest(body, content)
+	if err != nil {
+		body := FallbackURL + "/tx"
+		data, err = erpc.PostRequest(body, content)
+		if err != nil {
+			log.Println("could not submit transacation: ", err)
+			return x, err
+		}
+	}
+	err = json.Unmarshal(data, &x)
+	return x, err
 }
