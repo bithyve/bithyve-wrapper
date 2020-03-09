@@ -165,7 +165,12 @@ func MultiBalTxs() {
 		}
 
 		var ret format.BalTxReturn
-		ret.Balance = multiBalance(arr, w, r)
+
+		go func(arr []string) {
+			ret.Balance = multiBalance(arr, w, r)
+		}(arr)
+
+		// multiAddr is a synch call, so multiBalance should finish before
 		ret.Transactions, err = multiAddr(w, r, arr)
 		if err != nil {
 			return
