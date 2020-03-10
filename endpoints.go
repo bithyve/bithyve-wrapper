@@ -239,23 +239,27 @@ func GetFees() {
 	})
 }
 
-// PostTx posts a transaction to the blockchain via electrs
+// PostTx posts a transaction to the blockchain
 func PostTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
-		err := erpc.CheckPost(w, r)
+		// validate if the person requesting this is a vlaid user on the platform
+		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
-			erpc.ResponseHandler(w, erpc.StatusNotFound)
 			log.Println(err)
 			return
 		}
-
-		x, err := electrs.PostTx(r.Body)
+		body := electrs.ElectrsURL + "/tx"
+		data, err := erpc.PostRequest(body, r.Body)
 		if err != nil {
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
-			log.Println(err)
+			log.Println("could not submit transacation to testnet, quitting")
+		}
+		var x interface{}
+		err = json.Unmarshal(data, &x)
+		if err != nil {
+			log.Println("error while unmarshalling json struct", string(data))
+			w.Write(data)
 			return
 		}
-
 		erpc.MarshalSend(w, x)
 	})
 }

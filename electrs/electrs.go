@@ -2,7 +2,6 @@ package electrs
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 
 	"github.com/bithyve/bithyve-wrapper/format"
@@ -154,23 +153,6 @@ func GetFeeEstimates() (format.FeeResponse, error) {
 		}
 	}
 
-	err = json.Unmarshal(data, &x)
-	return x, err
-}
-
-// PostTx posts a tx to the blockchain
-func PostTx(content io.Reader) (interface{}, error) {
-	var x interface{}
-	body := ElectrsURL + "/tx"
-	data, err := erpc.PostRequest(body, content)
-	if err != nil {
-		body := FallbackURL + "/tx"
-		data, err = erpc.PostRequest(body, content)
-		if err != nil {
-			log.Println("could not submit transacation: ", err)
-			return x, err
-		}
-	}
 	err = json.Unmarshal(data, &x)
 	return x, err
 }
