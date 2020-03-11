@@ -14,7 +14,23 @@ import (
 )
 
 func wait() {
-	time.Sleep(25 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
+}
+
+func blockWait(length int) {
+	if length < 5 {
+		time.Sleep(40 * time.Millisecond)
+	} else if length >= 5 && length < 10 {
+		time.Sleep(80 * time.Millisecond)
+	} else if length >= 10 && length < 100 {
+		time.Sleep(120 * time.Millisecond)
+	} else if length >= 100 && length < 150 {
+		time.Sleep(150 * time.Millisecond)
+	} else if length >= 150 && length < 200 {
+		time.Sleep(200 * time.Millisecond)
+	} else {
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
@@ -66,11 +82,43 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 		return x, err
 	}
 
-	for i, elem := range arr {
-		x[i].Address = elem // store the address of the passed elements
-		allTxs, err := electrs.GetTxsAddress(elem)
-		if err == nil {
-			go func(i int, elem string, allTxs []format.Tx) {
+	var maxTxs = 0
+	if opts.Mainnet {
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			allTxs, err := electrs.GetTxsAddress(elem)
+			if err == nil {
+				if len(allTxs) > maxTxs {
+					maxTxs = len(allTxs)
+				}
+				go func(i int, elem string, allTxs []format.Tx) {
+					x[i].TotalTransactions = float64(len(allTxs))
+					x[i].Transactions = allTxs
+					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+					for j := range x[i].Transactions {
+						if x[i].Transactions[j].Status.Confirmed {
+							x[i].Transactions[j].NumberofConfirmations =
+								currentBh - x[i].Transactions[j].Status.BlockHeight
+						} else {
+							x[i].Transactions[j].NumberofConfirmations = 0
+						}
+					}
+					go func(i int, elem string) {
+						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+							electrs.GetBalanceCount(elem)
+					}(i, elem)
+				}(i, elem, allTxs)
+			} else {
+				log.Println("error in gettxsaddress call: ", err)
+			}
+		}
+		blockWait(maxTxs)
+	} else {
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			allTxs, err := electrs.GetTxsAddress(elem)
+			if err == nil {
+
 				x[i].TotalTransactions = float64(len(allTxs))
 				x[i].Transactions = allTxs
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
@@ -82,17 +130,14 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 						x[i].Transactions[j].NumberofConfirmations = 0
 					}
 				}
-				go func(i int, elem string) {
-					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-						electrs.GetBalanceCount(elem)
-				}(i, elem)
-			}(i, elem, allTxs)
-		} else {
-			log.Println("error in gettxsaddress call: ", err)
+				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+					electrs.GetBalanceCount(elem)
+			} else {
+				log.Println("error in gettxsaddress call: ", err)
+			}
 		}
 	}
 
-	wait()
 	return x, nil
 }
 
@@ -101,15 +146,21 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 	for _, elem := range arr {
 		// send the request out
 		tBalance, tUnconfirmedBalance := 0.0, 0.0
-		go func(elem string) {
-			log.Println("calling the balances endpoint")
+		if opts.Mainnet {
+			go func(elem string) {
+				log.Println("calling the balances endpoint")
+				tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(elem)
+				x.Balance += tBalance
+				x.UnconfirmedBalance += tUnconfirmedBalance
+			}(elem)
+			wait()
+		} else {
 			tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(elem)
 			x.Balance += tBalance
 			x.UnconfirmedBalance += tUnconfirmedBalance
-		}(elem)
+		}
 	}
 
-	wait()
 	return x
 }
 
@@ -122,9 +173,22 @@ func MultiUtxos() {
 		}
 
 		var result [][]format.Utxo
-		for _, elem := range arr {
-			// send the request out
-			go func(elem string) {
+		if opts.Mainnet {
+			for _, elem := range arr {
+				// send the request out
+				go func(elem string) {
+					tempTxs, err := electrs.GetUtxosAddress(elem)
+					if err != nil {
+						erpc.ResponseHandler(w, http.StatusInternalServerError)
+						log.Println(err)
+						return
+					}
+					result = append(result, tempTxs)
+				}(elem)
+			}
+			wait()
+		} else {
+			for _, elem := range arr {
 				tempTxs, err := electrs.GetUtxosAddress(elem)
 				if err != nil {
 					erpc.ResponseHandler(w, http.StatusInternalServerError)
@@ -132,9 +196,8 @@ func MultiUtxos() {
 					return
 				}
 				result = append(result, tempTxs)
-			}(elem)
+			}
 		}
-		wait()
 		erpc.MarshalSend(w, result)
 	})
 }
@@ -166,9 +229,13 @@ func MultiBalTxs() {
 
 		var ret format.BalTxReturn
 
-		go func(arr []string) {
+		if opts.Mainnet {
+			go func(arr []string) {
+				ret.Balance = multiBalance(arr, w, r)
+			}(arr)
+		} else {
 			ret.Balance = multiBalance(arr, w, r)
-		}(arr)
+		}
 
 		// multiAddr is a synch call, so multiBalance should finish before
 		ret.Transactions, err = multiAddr(w, r, arr)
@@ -213,7 +280,6 @@ func MultiTxs() {
 			x.Txs = append(x.Txs, tempTxs)
 		}
 
-		wait()
 		erpc.MarshalSend(w, x)
 	})
 }
