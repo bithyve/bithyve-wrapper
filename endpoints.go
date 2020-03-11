@@ -48,7 +48,7 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 		return arr, err
 	}
 	var rf format.RequestFormat
-	err = json.Unmarshal(data, &rf)
+	err = rf.UnmarshalJSON(data)
 	if err != nil {
 		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		log.Println(err)

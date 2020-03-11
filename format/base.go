@@ -49,6 +49,12 @@ type Utxo struct {
 	Address string
 }
 
+//easyjson:json
+type Txs []Tx
+
+//easyjson:json
+type Utxos []Utxo
+
 // Tx is a copy of the transaction structure used by esplora
 type Tx struct {
 	Txid     string  `json:"txid"`

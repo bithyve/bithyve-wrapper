@@ -1,7 +1,6 @@
 package electrs
 
 import (
-	"encoding/json"
 	"log"
 
 	"github.com/bithyve/bithyve-wrapper/format"
@@ -54,7 +53,7 @@ func GetBalanceCount(addr string) (float64, float64) {
 	}
 	// now data is in byte, we need the other structure now
 	var x format.Balance
-	err = json.Unmarshal(data, &x)
+	err = x.UnmarshalJSON(data)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
 		return 0, 0
@@ -78,7 +77,7 @@ func GetBalanceAddress(addr string) (float64, float64) {
 	}
 	// now data is in byte, we need the other structure now
 	var x format.Balance
-	err = json.Unmarshal(data, &x)
+	err = x.UnmarshalJSON(data)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
 		return 0, 0
@@ -89,8 +88,8 @@ func GetBalanceAddress(addr string) (float64, float64) {
 }
 
 // GetTxsAddress gets the transactions associated with a given address
-func GetTxsAddress(addr string) ([]format.Tx, error) {
-	var x []format.Tx
+func GetTxsAddress(addr string) (format.Txs, error) {
+	var x format.Txs
 	body := ElectrsURL + "/address/" + addr + "/txs"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
@@ -104,7 +103,7 @@ func GetTxsAddress(addr string) ([]format.Tx, error) {
 		}
 	}
 	// now data is in byte, we need the other structure now
-	err = json.Unmarshal(data, &x)
+	err = x.UnmarshalJSON(data)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
 		return x, err
@@ -114,8 +113,8 @@ func GetTxsAddress(addr string) ([]format.Tx, error) {
 }
 
 // GetUtxosAddress gets the utxos associated with a given address
-func GetUtxosAddress(addr string) ([]format.Utxo, error) {
-	var x []format.Utxo
+func GetUtxosAddress(addr string) (format.Utxos, error) {
+	var x format.Utxos
 	body := ElectrsURL + "/address/" + addr + "/utxo"
 	data, err := erpc.GetRequest(body)
 	if err != nil {
@@ -127,7 +126,7 @@ func GetUtxosAddress(addr string) ([]format.Utxo, error) {
 			return nil, err
 		}
 	}
-	err = json.Unmarshal(data, &x)
+	err = x.UnmarshalJSON(data)
 	if err != nil {
 		log.Println("did not unmarshal json", err)
 		return nil, err
@@ -153,6 +152,6 @@ func GetFeeEstimates() (format.FeeResponse, error) {
 		}
 	}
 
-	err = json.Unmarshal(data, &x)
+	err = x.UnmarshalJSON(data)
 	return x, err
 }
