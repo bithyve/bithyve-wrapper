@@ -17,6 +17,22 @@ func wait() {
 	time.Sleep(100 * time.Millisecond)
 }
 
+func blockWait(length int) {
+	if length < 5 {
+		time.Sleep(40 * time.Millisecond)
+	} else if length >= 5 && length < 10 {
+		time.Sleep(80 * time.Millisecond)
+	} else if length >= 10 && length < 100 {
+		time.Sleep(120 * time.Millisecond)
+	} else if length >= 100 && length < 150 {
+		time.Sleep(150 * time.Millisecond)
+	} else if length >= 150 && length < 200 {
+		time.Sleep(200 * time.Millisecond)
+	} else {
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	var arr []string
 	err := erpc.CheckPost(w, r)
@@ -66,11 +82,15 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 		return x, err
 	}
 
+	var maxTxs = 0
 	if opts.Mainnet {
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
 			allTxs, err := electrs.GetTxsAddress(elem)
 			if err == nil {
+				if len(allTxs) > maxTxs {
+					maxTxs = len(allTxs)
+				}
 				go func(i int, elem string, allTxs []format.Tx) {
 					x[i].TotalTransactions = float64(len(allTxs))
 					x[i].Transactions = allTxs
@@ -92,7 +112,7 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 				log.Println("error in gettxsaddress call: ", err)
 			}
 		}
-		wait()
+		blockWait(maxTxs)
 	} else {
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
@@ -260,7 +280,6 @@ func MultiTxs() {
 			x.Txs = append(x.Txs, tempTxs)
 		}
 
-		wait()
 		erpc.MarshalSend(w, x)
 	})
 }
