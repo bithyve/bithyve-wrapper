@@ -9,6 +9,7 @@ import (
 
 	"github.com/bithyve/bithyve-wrapper/electrs"
 	"github.com/bithyve/bithyve-wrapper/format"
+	"github.com/julienschmidt/httprouter"
 
 	erpc "github.com/Varunram/essentials/rpc"
 )
@@ -165,8 +166,8 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 }
 
 // MultiUtxos gets the utxos associated with multiple addresses
-func MultiUtxos() {
-	http.HandleFunc("/utxos", func(w http.ResponseWriter, r *http.Request) {
+func MultiUtxos(router *httprouter.Router) {
+	router.POST("/utxos", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -203,8 +204,8 @@ func MultiUtxos() {
 }
 
 // MultiData gets all data associated with a particular address
-func MultiData() {
-	http.HandleFunc("/data", func(w http.ResponseWriter, r *http.Request) {
+func MultiData(router *httprouter.Router) {
+	router.POST("/data", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -220,8 +221,8 @@ func MultiData() {
 }
 
 // MultiBalTxs combines the balance and multiaddr endpoints
-func MultiBalTxs() {
-	http.HandleFunc("/baltxs", func(w http.ResponseWriter, r *http.Request) {
+func MultiBalTxs(router *httprouter.Router) {
+	router.POST("/baltxs", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -248,8 +249,8 @@ func MultiBalTxs() {
 }
 
 // MultiBalances gets the net balance associated with multiple addresses
-func MultiBalances() {
-	http.HandleFunc("/balances", func(w http.ResponseWriter, r *http.Request) {
+func MultiBalances(router *httprouter.Router) {
+	router.POST("/balances", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -261,8 +262,8 @@ func MultiBalances() {
 }
 
 // MultiTxs gets the transactions associated with multiple addresses
-func MultiTxs() {
-	http.HandleFunc("/txs", func(w http.ResponseWriter, r *http.Request) {
+func MultiTxs(router *httprouter.Router) {
+	router.POST("/txs", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		arr, err := checkReq(w, r)
 		if err != nil {
 			return
@@ -285,8 +286,8 @@ func MultiTxs() {
 }
 
 // GetFees gets the current fee estimate from electrs
-func GetFees() {
-	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
+func GetFees(router *httprouter.Router) {
+	router.POST("/fees", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err := erpc.CheckPost(w, r)
 		if err != nil {
 			erpc.ResponseHandler(w, erpc.StatusNotFound)
@@ -306,8 +307,8 @@ func GetFees() {
 }
 
 // PostTx posts a transaction to the blockchain
-func PostTx() {
-	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
+func PostTx(router *httprouter.Router) {
+	router.POST("/tx", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
