@@ -17,7 +17,6 @@ func RelayTxid() {
 		// validate if the person requesting this is a vlaid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
-			erpc.ResponseHandler(w, http.StatusNotFound)
 			log.Println(err)
 			return
 		}
@@ -36,19 +35,20 @@ func RelayTxid() {
 // RelayGetRequest relays all remaining get requests to the esplora instance
 func RelayGetRequest() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			body := electrs.ElectrsURL + "" + r.URL.String()
-			data, err := erpc.GetRequest(body)
-			if err != nil {
-				erpc.ResponseHandler(w, http.StatusInternalServerError)
-				log.Println("could not submit transacation to testnet, quitting")
-				return
-			}
-			var x interface{}
-			_ = json.Unmarshal(data, &x)
-			erpc.MarshalSend(w, x)
-		} else {
-			erpc.ResponseHandler(w, erpc.StatusNotFound)
+		err := erpc.CheckGet(w, r)
+		if err != nil {
+			return
 		}
+
+		body := electrs.ElectrsURL + "" + r.URL.String()
+		data, err := erpc.GetRequest(body)
+		if err != nil {
+			erpc.ResponseHandler(w, http.StatusInternalServerError)
+			log.Println("could not submit transacation to testnet, quitting")
+			return
+		}
+		var x interface{}
+		_ = json.Unmarshal(data, &x)
+		erpc.MarshalSend(w, x)
 	})
 }

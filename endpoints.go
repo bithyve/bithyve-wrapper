@@ -37,7 +37,6 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	var arr []string
 	err := erpc.CheckPost(w, r)
 	if err != nil {
-		erpc.ResponseHandler(w, erpc.StatusNotFound)
 		log.Println(err)
 		return arr, err
 	}
@@ -290,7 +289,6 @@ func GetFees() {
 	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
 		err := erpc.CheckPost(w, r)
 		if err != nil {
-			erpc.ResponseHandler(w, erpc.StatusNotFound)
 			log.Println(err)
 			return
 		}
