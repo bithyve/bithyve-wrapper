@@ -33,9 +33,6 @@ func startHandlers() {
 
 func main() {
 	startHandlers()
-	// if you're running esplora, use socat tcp-listen:3003,reuseaddr,fork tcp:localhost:3002 to tunnel port since
-	// it does not seem possible to open the port directly
-	// // setup https here
 
 	_, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
