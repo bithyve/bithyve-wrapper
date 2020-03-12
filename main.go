@@ -11,6 +11,7 @@ import (
 
 	erpc "github.com/Varunram/essentials/rpc"
 	flags "github.com/jessevdk/go-flags"
+	"github.com/julienschmidt/httprouter"
 )
 
 var opts struct {
@@ -18,21 +19,26 @@ var opts struct {
 }
 
 func startHandlers() {
-	MultiData()
-	MultiBalTxs()
-	MultiUtxos()
-	MultiBalances()
-	MultiTxs()
+	router := httprouter.New()
+	MultiData(router)
+	MultiBalTxs(router)
+	MultiUtxos(router)
+	MultiBalances(router)
+	MultiTxs(router)
 
 	erpc.SetupPingHandler()
-	GetFees()
-	PostTx()
+	GetFees(router)
+	PostTx(router)
 	RelayTxid()
 	RelayGetRequest()
+
+	err := http.ListenAndServeTLS("localhost:445", "ssl/server.crt", "ssl/server.key", router)
+	if err != nil {
+		log.Fatal("ListenAndServe: ", err)
+	}
 }
 
 func main() {
-	startHandlers()
 	// if you're running esplora, use socat tcp-listen:3003,reuseaddr,fork tcp:localhost:3002 to tunnel port since
 	// it does not seem possible to open the port directly
 	// // setup https here
@@ -47,8 +53,5 @@ func main() {
 		electrs.SetMainnet()
 	}
 
-	err = http.ListenAndServeTLS("localhost:445", "ssl/server.crt", "ssl/server.key", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+	startHandlers()
 }
