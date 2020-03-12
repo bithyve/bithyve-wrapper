@@ -141,8 +141,8 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 }
 
 func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.BalanceReturn {
-	var x format.BalanceReturn
 	if opts.Mainnet {
+		var x format.BalanceReturn
 		for _, elem := range arr {
 			tBalance, tUnconfirmedBalance := 0.0, 0.0
 			go func(elem string) {
@@ -151,16 +151,16 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 				x.Balance += tBalance
 				x.UnconfirmedBalance += tUnconfirmedBalance
 			}(elem)
-			wait()
 		}
-	} else {
-		for _, elem := range arr {
-			tBalance, tUnconfirmedBalance := electrs.GetBalanceAddress(elem)
-			x.Balance += tBalance
-			x.UnconfirmedBalance += tUnconfirmedBalance
-		}
+		wait()
+		return x
 	}
-
+	var x format.BalanceReturn
+	for _, elem := range arr {
+		tBalance, tUnconfirmedBalance := electrs.GetBalanceAddress(elem)
+		x.Balance += tBalance
+		x.UnconfirmedBalance += tUnconfirmedBalance
+	}
 	return x
 }
 
@@ -228,21 +228,12 @@ func MultiBalTxs() {
 		}
 
 		var ret format.BalTxReturn
-
-		if opts.Mainnet {
-			go func(arr []string) {
-				ret.Balance = multiBalance(arr, w, r)
-			}(arr)
-		} else {
-			ret.Balance = multiBalance(arr, w, r)
-		}
-
+		ret.Balance = multiBalance(arr, w, r)
 		// multiAddr is a synch call, so multiBalance should finish before
 		ret.Transactions, err = multiAddr(w, r, arr)
 		if err != nil {
 			return
 		}
-
 		erpc.MarshalSend(w, ret)
 	})
 }
