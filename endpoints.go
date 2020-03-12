@@ -165,6 +165,12 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 	return x
 }
 
+func ping(router *httprouter.Router) {
+	router.GET("/ping", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		erpc.ResponseHandler(w, erpc.StatusOK)
+	})
+}
+
 // MultiUtxos gets the utxos associated with multiple addresses
 func MultiUtxos(router *httprouter.Router) {
 	router.POST("/utxos", func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

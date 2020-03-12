@@ -9,7 +9,6 @@ import (
 
 	//"strings"
 
-	erpc "github.com/Varunram/essentials/rpc"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/julienschmidt/httprouter"
 )
@@ -26,11 +25,12 @@ func startHandlers() {
 	MultiBalances(router)
 	MultiTxs(router)
 
-	erpc.SetupPingHandler()
 	GetFees(router)
 	PostTx(router)
 	RelayTxid()
 	RelayGetRequest()
+
+	ping(router)
 
 	err := http.ListenAndServeTLS("localhost:445", "ssl/server.crt", "ssl/server.key", router)
 	if err != nil {
