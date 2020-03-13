@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/bithyve/bithyve-wrapper/electrs"
@@ -140,29 +141,27 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 	return x, nil
 }
 
+func worker(wg *sync.WaitGroup, elem string, x format.BalanceReturn) {
+	defer wg.Done()
+	temp1, temp2 := electrs.GetBalanceAddress(elem)
+	x.Balance += temp1
+	x.UnconfirmedBalance += temp2
+}
+
 func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.BalanceReturn {
 	if opts.Mainnet {
 		var x format.BalanceReturn
-
-		// fire up the cache
-		for _, elem := range arr {
-			go func(elem string) {
-				electrs.GetBalanceAddress(elem)
-			}(elem)
-		}
+		var wg sync.WaitGroup
 
 		for _, elem := range arr {
-			tBalance, tUnconfirmedBalance := 0.0, 0.0
-			go func(elem string) {
-				tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(elem)
-				x.Balance += tBalance
-				x.UnconfirmedBalance += tUnconfirmedBalance
-			}(elem)
+			wg.Add(1)
+			go worker(&wg, elem, x)
 		}
 
-		time.Sleep(25 * time.Millisecond)
+		wg.Wait()
 		return x
 	}
+
 	var x format.BalanceReturn
 	for _, elem := range arr {
 		tBalance, tUnconfirmedBalance := electrs.GetBalanceAddress(elem)
