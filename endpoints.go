@@ -272,13 +272,14 @@ func MultiBalances() {
 	})
 }
 
-func txsHelper(wg *sync.WaitGroup, x format.TxReturn, i int, elem string) {
+func txsHelper(wg *sync.WaitGroup, x *format.TxReturn, i int, elem string) {
 	defer wg.Done()
 	tempTxs, err := electrs.GetTxsAddress(elem)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	x.Txs[i] = make([]format.Tx, len(tempTxs))
 	x.Txs[i] = tempTxs
 }
 
@@ -297,9 +298,10 @@ func MultiTxs() {
 		for i, elem := range arr {
 			// send the request out
 			wg.Add(1)
-			go txsHelper(&wg, x, i, elem)
+			go txsHelper(&wg, &x, i, elem)
 		}
 
+		wg.Wait()
 		erpc.MarshalSend(w, x)
 	})
 }
