@@ -179,14 +179,15 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 	return x
 }
 
-func utxoHelper(wg *sync.WaitGroup, result [][]format.Utxo, elem string) {
+func utxoHelper(wg *sync.WaitGroup, result [][]format.Utxo, i int, elem string) {
 	defer wg.Done()
 	tempTxs, err := electrs.GetUtxosAddress(elem)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	result = append(result, tempTxs)
+	log.Println("temptxs:", tempTxs)
+	result[i] = tempTxs
 }
 
 // MultiUtxos gets the utxos associated with multiple addresses
@@ -198,15 +199,16 @@ func MultiUtxos() {
 		}
 
 		var wg sync.WaitGroup
-		var result [][]format.Utxo
+		result := make([][]format.Utxo, len(arr))
 		if opts.Mainnet {
-			for _, elem := range arr {
+			for i, elem := range arr {
 				// send the request out
 				wg.Add(1)
-				go utxoHelper(&wg, result, elem)
+				go utxoHelper(&wg, result, i, elem)
 			}
 
 			wg.Wait()
+			erpc.MarshalSend(w, result)
 		} else {
 			for _, elem := range arr {
 				tempTxs, err := electrs.GetUtxosAddress(elem)
@@ -217,8 +219,8 @@ func MultiUtxos() {
 				}
 				result = append(result, tempTxs)
 			}
+			erpc.MarshalSend(w, result)
 		}
-		erpc.MarshalSend(w, result)
 	})
 }
 
