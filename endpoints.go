@@ -71,6 +71,31 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	return nodups, nil
 }
 
+func addrHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string, currentBh float64) {
+	defer wg.Done()
+
+	allTxs, err := electrs.GetTxsAddress(elem)
+	if err == nil {
+		x[i].TotalTransactions = float64(len(allTxs))
+		x[i].Transactions = allTxs
+		x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+		for j := range x[i].Transactions {
+			if x[i].Transactions[j].Status.Confirmed {
+				x[i].Transactions[j].NumberofConfirmations =
+					currentBh - x[i].Transactions[j].Status.BlockHeight
+			} else {
+				x[i].Transactions[j].NumberofConfirmations = 0
+			}
+		}
+	}
+}
+
+func addrbalHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string) {
+	defer wg.Done()
+	x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+		electrs.GetBalanceCount(elem)
+}
+
 func multiAddr(w http.ResponseWriter, r *http.Request,
 	arr []string) ([]format.MultigetAddrReturn, error) {
 
@@ -82,37 +107,24 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 		return x, err
 	}
 
-	var maxTxs = 0
 	if opts.Mainnet {
+		var wg1 sync.WaitGroup
+		var wg2 sync.WaitGroup
+
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
-			allTxs, err := electrs.GetTxsAddress(elem)
-			if err == nil {
-				if len(allTxs) > maxTxs {
-					maxTxs = len(allTxs)
-				}
-				go func(i int, elem string, allTxs []format.Tx) {
-					x[i].TotalTransactions = float64(len(allTxs))
-					x[i].Transactions = allTxs
-					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
-					for j := range x[i].Transactions {
-						if x[i].Transactions[j].Status.Confirmed {
-							x[i].Transactions[j].NumberofConfirmations =
-								currentBh - x[i].Transactions[j].Status.BlockHeight
-						} else {
-							x[i].Transactions[j].NumberofConfirmations = 0
-						}
-					}
-					go func(i int, elem string) {
-						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-							electrs.GetBalanceCount(elem)
-					}(i, elem)
-				}(i, elem, allTxs)
-			} else {
-				log.Println("error in gettxsaddress call: ", err)
-			}
+			wg1.Add(1)
+			go addrHelper(&wg1, x, i, elem, currentBh)
 		}
-		blockWait(maxTxs)
+
+		wg1.Wait()
+
+		for i, elem := range arr {
+			wg2.Add(1)
+			go addrbalHelper(&wg2, x, i, elem)
+		}
+
+		wg2.Wait()
 	} else {
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
