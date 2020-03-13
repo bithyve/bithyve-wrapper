@@ -186,7 +186,6 @@ func utxoHelper(wg *sync.WaitGroup, result [][]format.Utxo, i int, elem string) 
 		log.Println(err)
 		return
 	}
-	log.Println("temptxs:", tempTxs)
 	result[i] = tempTxs
 }
 
@@ -273,6 +272,16 @@ func MultiBalances() {
 	})
 }
 
+func txsHelper(wg *sync.WaitGroup, x format.TxReturn, i int, elem string) {
+	defer wg.Done()
+	tempTxs, err := electrs.GetTxsAddress(elem)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	x.Txs[i] = tempTxs
+}
+
 // MultiTxs gets the transactions associated with multiple addresses
 func MultiTxs() {
 	http.HandleFunc("/txs", func(w http.ResponseWriter, r *http.Request) {
@@ -282,15 +291,13 @@ func MultiTxs() {
 		}
 
 		var x format.TxReturn
-		for _, elem := range arr {
+		var wg sync.WaitGroup
+		x.Txs = make([][]format.Tx, len(arr))
+
+		for i, elem := range arr {
 			// send the request out
-			tempTxs, err := electrs.GetTxsAddress(elem)
-			if err != nil {
-				erpc.ResponseHandler(w, http.StatusInternalServerError)
-				log.Println(err)
-				return
-			}
-			x.Txs = append(x.Txs, tempTxs)
+			wg.Add(1)
+			go txsHelper(&wg, x, i, elem)
 		}
 
 		erpc.MarshalSend(w, x)
