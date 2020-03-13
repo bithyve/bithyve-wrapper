@@ -141,7 +141,7 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 	return x, nil
 }
 
-func worker(wg *sync.WaitGroup, elem string, x format.BalanceReturn) {
+func balHelper(wg *sync.WaitGroup, elem string, x *format.BalanceReturn) {
 	defer wg.Done()
 	temp1, temp2 := electrs.GetBalanceAddress(elem)
 	x.Balance += temp1
@@ -155,7 +155,7 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 
 		for _, elem := range arr {
 			wg.Add(1)
-			go worker(&wg, elem, x)
+			go balHelper(&wg, elem, &x)
 		}
 
 		wg.Wait()
