@@ -44,7 +44,7 @@ func main() {
 		electrs.SetMainnet()
 	}
 
-	err = http.ListenAndServeTLS("localhost:445", "ssl/server.crt", "ssl/server.key", nil)
+	err = http.ListenAndServe("localhost:8080", nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/bithyve/bithyve-wrapper/electrs"
@@ -12,10 +13,6 @@ import (
 
 	erpc "github.com/Varunram/essentials/rpc"
 )
-
-func wait() {
-	time.Sleep(100 * time.Millisecond)
-}
 
 func blockWait(length int) {
 	if length < 5 {
@@ -70,6 +67,31 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	return nodups, nil
 }
 
+func addrHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string, currentBh float64) {
+	defer wg.Done()
+
+	allTxs, err := electrs.GetTxsAddress(elem)
+	if err == nil {
+		x[i].TotalTransactions = float64(len(allTxs))
+		x[i].Transactions = allTxs
+		x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+		for j := range x[i].Transactions {
+			if x[i].Transactions[j].Status.Confirmed {
+				x[i].Transactions[j].NumberofConfirmations =
+					currentBh - x[i].Transactions[j].Status.BlockHeight
+			} else {
+				x[i].Transactions[j].NumberofConfirmations = 0
+			}
+		}
+	}
+}
+
+func addrbalHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string) {
+	defer wg.Done()
+	x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+		electrs.GetBalanceCount(elem)
+}
+
 func multiAddr(w http.ResponseWriter, r *http.Request,
 	arr []string) ([]format.MultigetAddrReturn, error) {
 
@@ -81,37 +103,24 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 		return x, err
 	}
 
-	var maxTxs = 0
 	if opts.Mainnet {
+		var wg1 sync.WaitGroup
+		var wg2 sync.WaitGroup
+
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
-			allTxs, err := electrs.GetTxsAddress(elem)
-			if err == nil {
-				if len(allTxs) > maxTxs {
-					maxTxs = len(allTxs)
-				}
-				go func(i int, elem string, allTxs []format.Tx) {
-					x[i].TotalTransactions = float64(len(allTxs))
-					x[i].Transactions = allTxs
-					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
-					for j := range x[i].Transactions {
-						if x[i].Transactions[j].Status.Confirmed {
-							x[i].Transactions[j].NumberofConfirmations =
-								currentBh - x[i].Transactions[j].Status.BlockHeight
-						} else {
-							x[i].Transactions[j].NumberofConfirmations = 0
-						}
-					}
-					go func(i int, elem string) {
-						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-							electrs.GetBalanceCount(elem)
-					}(i, elem)
-				}(i, elem, allTxs)
-			} else {
-				log.Println("error in gettxsaddress call: ", err)
-			}
+			wg1.Add(1)
+			go addrHelper(&wg1, x, i, elem, currentBh)
 		}
-		blockWait(maxTxs)
+
+		wg1.Wait()
+
+		for i, elem := range arr {
+			wg2.Add(1)
+			go addrbalHelper(&wg2, x, i, elem)
+		}
+
+		wg2.Wait()
 	} else {
 		for i, elem := range arr {
 			x[i].Address = elem // store the address of the passed elements
@@ -140,21 +149,27 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 	return x, nil
 }
 
+func balHelper(wg *sync.WaitGroup, elem string, x *format.BalanceReturn) {
+	defer wg.Done()
+	temp1, temp2 := electrs.GetBalanceAddress(elem)
+	x.Balance += temp1
+	x.UnconfirmedBalance += temp2
+}
+
 func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.BalanceReturn {
 	if opts.Mainnet {
 		var x format.BalanceReturn
+		var wg sync.WaitGroup
+
 		for _, elem := range arr {
-			tBalance, tUnconfirmedBalance := 0.0, 0.0
-			go func(elem string) {
-				log.Println("calling the balances endpoint")
-				tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(elem)
-				x.Balance += tBalance
-				x.UnconfirmedBalance += tUnconfirmedBalance
-			}(elem)
+			wg.Add(1)
+			go balHelper(&wg, elem, &x)
 		}
-		wait()
+
+		wg.Wait()
 		return x
 	}
+
 	var x format.BalanceReturn
 	for _, elem := range arr {
 		tBalance, tUnconfirmedBalance := electrs.GetBalanceAddress(elem)
@@ -162,6 +177,16 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 		x.UnconfirmedBalance += tUnconfirmedBalance
 	}
 	return x
+}
+
+func utxoHelper(wg *sync.WaitGroup, result [][]format.Utxo, i int, elem string) {
+	defer wg.Done()
+	tempTxs, err := electrs.GetUtxosAddress(elem)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	result[i] = tempTxs
 }
 
 // MultiUtxos gets the utxos associated with multiple addresses
@@ -172,21 +197,17 @@ func MultiUtxos() {
 			return
 		}
 
-		var result [][]format.Utxo
+		var wg sync.WaitGroup
+		result := make([][]format.Utxo, len(arr))
 		if opts.Mainnet {
-			for _, elem := range arr {
+			for i, elem := range arr {
 				// send the request out
-				go func(elem string) {
-					tempTxs, err := electrs.GetUtxosAddress(elem)
-					if err != nil {
-						erpc.ResponseHandler(w, http.StatusInternalServerError)
-						log.Println(err)
-						return
-					}
-					result = append(result, tempTxs)
-				}(elem)
+				wg.Add(1)
+				go utxoHelper(&wg, result, i, elem)
 			}
-			wait()
+
+			wg.Wait()
+			erpc.MarshalSend(w, result)
 		} else {
 			for _, elem := range arr {
 				tempTxs, err := electrs.GetUtxosAddress(elem)
@@ -197,8 +218,8 @@ func MultiUtxos() {
 				}
 				result = append(result, tempTxs)
 			}
+			erpc.MarshalSend(w, result)
 		}
-		erpc.MarshalSend(w, result)
 	})
 }
 
@@ -251,6 +272,17 @@ func MultiBalances() {
 	})
 }
 
+func txsHelper(wg *sync.WaitGroup, x *format.TxReturn, i int, elem string) {
+	defer wg.Done()
+	tempTxs, err := electrs.GetTxsAddress(elem)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	x.Txs[i] = make([]format.Tx, len(tempTxs))
+	x.Txs[i] = tempTxs
+}
+
 // MultiTxs gets the transactions associated with multiple addresses
 func MultiTxs() {
 	http.HandleFunc("/txs", func(w http.ResponseWriter, r *http.Request) {
@@ -260,17 +292,16 @@ func MultiTxs() {
 		}
 
 		var x format.TxReturn
-		for _, elem := range arr {
+		var wg sync.WaitGroup
+		x.Txs = make([][]format.Tx, len(arr))
+
+		for i, elem := range arr {
 			// send the request out
-			tempTxs, err := electrs.GetTxsAddress(elem)
-			if err != nil {
-				erpc.ResponseHandler(w, http.StatusInternalServerError)
-				log.Println(err)
-				return
-			}
-			x.Txs = append(x.Txs, tempTxs)
+			wg.Add(1)
+			go txsHelper(&wg, &x, i, elem)
 		}
 
+		wg.Wait()
 		erpc.MarshalSend(w, x)
 	})
 }
