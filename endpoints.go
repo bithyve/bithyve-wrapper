@@ -14,10 +14,6 @@ import (
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
-func wait() {
-	time.Sleep(100 * time.Millisecond)
-}
-
 func blockWait(length int) {
 	if length < 5 {
 		time.Sleep(40 * time.Millisecond)
@@ -183,6 +179,16 @@ func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.B
 	return x
 }
 
+func utxoHelper(wg *sync.WaitGroup, result [][]format.Utxo, elem string) {
+	defer wg.Done()
+	tempTxs, err := electrs.GetUtxosAddress(elem)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	result = append(result, tempTxs)
+}
+
 // MultiUtxos gets the utxos associated with multiple addresses
 func MultiUtxos() {
 	http.HandleFunc("/utxos", func(w http.ResponseWriter, r *http.Request) {
@@ -191,21 +197,16 @@ func MultiUtxos() {
 			return
 		}
 
+		var wg *sync.WaitGroup
 		var result [][]format.Utxo
 		if opts.Mainnet {
 			for _, elem := range arr {
 				// send the request out
-				go func(elem string) {
-					tempTxs, err := electrs.GetUtxosAddress(elem)
-					if err != nil {
-						erpc.ResponseHandler(w, http.StatusInternalServerError)
-						log.Println(err)
-						return
-					}
-					result = append(result, tempTxs)
-				}(elem)
+				wg.Add(1)
+				go utxoHelper(wg, result, elem)
 			}
-			wait()
+
+			wg.Wait()
 		} else {
 			for _, elem := range arr {
 				tempTxs, err := electrs.GetUtxosAddress(elem)
