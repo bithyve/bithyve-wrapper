@@ -197,13 +197,13 @@ func MultiUtxos() {
 			return
 		}
 
-		var wg *sync.WaitGroup
+		var wg sync.WaitGroup
 		var result [][]format.Utxo
 		if opts.Mainnet {
 			for _, elem := range arr {
 				// send the request out
 				wg.Add(1)
-				go utxoHelper(wg, result, elem)
+				go utxoHelper(&wg, result, elem)
 			}
 
 			wg.Wait()
