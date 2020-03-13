@@ -15,6 +15,7 @@ import (
 
 var opts struct {
 	Mainnet bool `short:"m" description:"Connect to mainnet"`
+	Test    bool `short:"t" description:"Use for testing"`
 }
 
 func startHandlers() {
@@ -44,8 +45,15 @@ func main() {
 		electrs.SetMainnet()
 	}
 
-	err = http.ListenAndServe("localhost:8080", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	if opts.Test {
+		err = http.ListenAndServe("localhost:8080", nil)
+		if err != nil {
+			log.Fatal("ListenAndServe: ", err)
+		}
+	} else {
+		err = http.ListenAndServeTLS("localhost:445", "ssl/server.crt", "ssl/server.key", nil)
+		if err != nil {
+			log.Fatal("ListenAndServe: ", err)
+		}
 	}
 }
