@@ -143,16 +143,24 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 func multiBalance(arr []string, w http.ResponseWriter, r *http.Request) format.BalanceReturn {
 	if opts.Mainnet {
 		var x format.BalanceReturn
+
+		// fire up the cache
+		for _, elem := range arr {
+			go func(elem string) {
+				electrs.GetBalanceAddress(elem)
+			}(elem)
+		}
+
 		for _, elem := range arr {
 			tBalance, tUnconfirmedBalance := 0.0, 0.0
 			go func(elem string) {
-				log.Println("calling the balances endpoint")
 				tBalance, tUnconfirmedBalance = electrs.GetBalanceAddress(elem)
 				x.Balance += tBalance
 				x.UnconfirmedBalance += tUnconfirmedBalance
 			}(elem)
 		}
-		wait()
+
+		time.Sleep(25 * time.Millisecond)
 		return x
 	}
 	var x format.BalanceReturn
