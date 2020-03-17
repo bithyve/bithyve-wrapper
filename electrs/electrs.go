@@ -100,7 +100,6 @@ func GetTxsAddress(addr string) ([]format.Tx, error) {
 		if err != nil {
 			log.Println("did not get response", err)
 			return x, err
-
 		}
 	}
 	// now data is in byte, we need the other structure now

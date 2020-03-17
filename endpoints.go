@@ -14,6 +14,13 @@ import (
 	erpc "github.com/Varunram/essentials/rpc"
 )
 
+var (
+	// APIError is the response message returned if there's something wrong with electrs
+	APIError = "API error, couldn't contact electrs"
+	// JSONError is the response message returned if there's a problem with converting a bytestring to json
+	JSONError = "Error while converting response to json"
+)
+
 func blockWait(length int) {
 	if length < 5 {
 		time.Sleep(40 * time.Millisecond)
@@ -39,14 +46,14 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		erpc.ResponseHandler(w, erpc.StatusBadRequest)
+		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		log.Println(err)
 		return arr, err
 	}
 	var rf format.RequestFormat
 	err = json.Unmarshal(data, &rf)
 	if err != nil {
-		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		erpc.ResponseHandler(w, erpc.StatusInternalServerError, JSONError)
 		log.Println(err)
 		return arr, err
 	}
@@ -98,7 +105,7 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 	x := make([]format.MultigetAddrReturn, len(arr))
 	currentBh, err := electrs.CurrentBlockHeight()
 	if err != nil {
-		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		erpc.ResponseHandler(w, erpc.StatusInternalServerError, APIError)
 		log.Println(err)
 		return x, err
 	}
@@ -212,7 +219,7 @@ func MultiUtxos() {
 			for _, elem := range arr {
 				tempTxs, err := electrs.GetUtxosAddress(elem)
 				if err != nil {
-					erpc.ResponseHandler(w, http.StatusInternalServerError)
+					erpc.ResponseHandler(w, http.StatusInternalServerError, APIError)
 					log.Println(err)
 					return
 				}
@@ -317,7 +324,7 @@ func GetFees() {
 
 		x, err := electrs.GetFeeEstimates()
 		if err != nil {
-			erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+			erpc.ResponseHandler(w, erpc.StatusInternalServerError, APIError)
 			log.Println(err)
 			return
 		}

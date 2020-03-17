@@ -21,7 +21,7 @@ func RelayTxid() {
 			return
 		}
 		if r.URL.Query()["txid"] == nil {
-			erpc.ResponseHandler(w, http.StatusBadRequest)
+			erpc.ResponseHandler(w, http.StatusBadRequest, "required param txid not found")
 			return
 		}
 
@@ -43,7 +43,7 @@ func RelayGetRequest() {
 		body := electrs.ElectrsURL + "" + r.URL.String()
 		data, err := erpc.GetRequest(body)
 		if err != nil {
-			erpc.ResponseHandler(w, http.StatusInternalServerError)
+			erpc.ResponseHandler(w, http.StatusInternalServerError, "error while relaying get request to electrs")
 			log.Println("could not submit transacation to testnet, quitting")
 			return
 		}
