@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bithyve/bithyve-wrapper/format"
 
@@ -23,10 +25,11 @@ var arr40 = []byte(`{"addresses":["35hTZ8vCYSUCn9E7CPMqTXZhgnRQaVKzQR","38WZB6kw
 
 var mainU = "https://api.bithyve.com"
 var fallback = "https://blockstream.info/api"
+var test = "http://localhost:8080"
 
 func testUtxos(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	defer wg.Done()
-	body := mainU + "/utxos"
+	body := test + "/utxos"
 
 	data, err := erpc.PostRequest(body, bytes.NewBuffer(arr))
 	if err != nil {
@@ -45,7 +48,7 @@ func testUtxos(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 
 func testData(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	defer wg.Done()
-	body := mainU + "/data"
+	body := test + "/data"
 
 	data, err := erpc.PostRequest(body, bytes.NewBuffer(arr))
 	if err != nil {
@@ -64,7 +67,7 @@ func testData(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 
 func testBalTxs(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	defer wg.Done()
-	body := mainU + "/baltxs"
+	body := test + "/baltxs"
 
 	data, err := erpc.PostRequest(body, bytes.NewBuffer(arr))
 	if err != nil {
@@ -83,7 +86,7 @@ func testBalTxs(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 
 func testBalances(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	defer wg.Done()
-	body := mainU + "/balances"
+	body := test + "/balances"
 
 	data, err := erpc.PostRequest(body, bytes.NewBuffer(arr))
 	if err != nil {
@@ -102,7 +105,7 @@ func testBalances(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 
 func testTxs(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	defer wg.Done()
-	body := mainU + "/txs"
+	body := test + "/txs"
 
 	data, err := erpc.PostRequest(body, bytes.NewBuffer(arr))
 	if err != nil {
@@ -121,7 +124,7 @@ func testTxs(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 
 func testFees(wg *sync.WaitGroup, t *testing.T) {
 	defer wg.Done()
-	body := mainU + "/fees"
+	body := test + "/fees"
 	formdata := url.Values{}
 	reader := strings.NewReader(formdata.Encode())
 
@@ -142,8 +145,12 @@ func testFees(wg *sync.WaitGroup, t *testing.T) {
 
 func TestOne(t *testing.T) {
 	electrs.SetURL(mainU, fallback)
-	erpc.SetConsts(10)
+	erpc.SetConsts(200)
 
+	startHandlers()
+	go http.ListenAndServe("localhost:8080", nil)
+
+	time.Sleep(3 * time.Second)
 	inputArray := make([][]byte, 5)
 	inputArray[0] = arr1
 	inputArray[1] = arr5
