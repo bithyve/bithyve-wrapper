@@ -22,6 +22,12 @@ func SetMainnet() {
 	FallbackURL = "https://blockstream.info/api"
 }
 
+// SetURL sets custom URLs for electrs and fallback
+func SetURL(main, fallback string) {
+	ElectrsURL = main
+	FallbackURL = fallback
+}
+
 // CurrentBlockHeight gets the current block height from the blockchain
 func CurrentBlockHeight() (float64, error) {
 	body := ElectrsURL + "/blocks/tip/height"
