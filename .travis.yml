@@ -1,0 +1,8 @@
+dist: xenial
+notifications:
+  email: false
+language: go
+go:
+  - 1.13.x
+script:
+  - go test .
