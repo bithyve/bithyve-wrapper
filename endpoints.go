@@ -216,14 +216,14 @@ func MultiUtxos() {
 			wg.Wait()
 			erpc.MarshalSend(w, result)
 		} else {
-			for _, elem := range arr {
+			for i, elem := range arr {
 				tempTxs, err := electrs.GetUtxosAddress(elem)
 				if err != nil {
 					erpc.ResponseHandler(w, http.StatusInternalServerError, APIError)
 					log.Println(err)
 					return
 				}
-				result = append(result, tempTxs)
+				result[i] = tempTxs
 			}
 			erpc.MarshalSend(w, result)
 		}
