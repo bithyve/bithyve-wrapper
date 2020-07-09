@@ -21,6 +21,7 @@ var opts struct {
 func startHandlers() {
 	MultiData()
 	MultiBalTxs()
+	MultiUtxoTxs()
 	MultiUtxos()
 	MultiBalances()
 	MultiTxs()

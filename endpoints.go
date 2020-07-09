@@ -266,6 +266,38 @@ func MultiBalTxs() {
 	})
 }
 
+// MultiUtxoTxs combines the utxo and multiaddr endpoints
+func MultiUtxoTxs() {
+	http.HandleFunc("/utxotxs", func(w http.ResponseWriter, r *http.Request) {
+		arr, err := checkReq(w, r)
+		if err != nil {
+			return
+		}
+
+		var wg sync.WaitGroup
+		var ret format.UtxoTxReturn
+		ret.Utxos = make([][]format.Utxo, len(arr))
+
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			ret.Transactions, err = multiAddr(w, r, arr)
+			if err != nil {
+				return
+			}
+		}(&wg)
+
+		for i, elem := range arr {
+			// send the request out
+			wg.Add(1)
+			go utxoHelper(&wg, ret.Utxos, i, elem)
+		}
+
+		wg.Wait()
+		erpc.MarshalSend(w, ret)
+	})
+}
+
 // MultiBalances gets the net balance associated with multiple addresses
 func MultiBalances() {
 	http.HandleFunc("/balances", func(w http.ResponseWriter, r *http.Request) {
