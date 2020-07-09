@@ -85,7 +85,7 @@ func addrHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem s
 		for j := range x[i].Transactions {
 			if x[i].Transactions[j].Status.Confirmed {
 				x[i].Transactions[j].NumberofConfirmations =
-					currentBh - x[i].Transactions[j].Status.BlockHeight
+					currentBh - x[i].Transactions[j].Status.BlockHeight + 1
 			} else {
 				x[i].Transactions[j].NumberofConfirmations = 0
 			}
@@ -140,7 +140,7 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 				for j := range x[i].Transactions {
 					if x[i].Transactions[j].Status.Confirmed {
 						x[i].Transactions[j].NumberofConfirmations =
-							currentBh - x[i].Transactions[j].Status.BlockHeight
+							currentBh - x[i].Transactions[j].Status.BlockHeight + 1
 					} else {
 						x[i].Transactions[j].NumberofConfirmations = 0
 					}
