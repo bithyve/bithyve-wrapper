@@ -84,6 +84,25 @@ func testBalTxs(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	log.Println("/baltxs endpoint works: ", len(arr))
 }
 
+func testUtxoTxs(wg *sync.WaitGroup, t *testing.T, arr []byte) {
+	defer wg.Done()
+	body := test + "/utxotxs"
+
+	data, err := erpc.PostRequest(body, bytes.NewBuffer(arr))
+	if err != nil {
+		log.Println(err)
+		t.Fatal(err)
+	}
+
+	var x format.BalTxReturn
+	err = json.Unmarshal(data, &x)
+	if err != nil {
+		log.Println(err)
+		t.Fatal(err)
+	}
+	log.Println("/utxotxs endpoint works: ", len(arr))
+}
+
 func testBalances(wg *sync.WaitGroup, t *testing.T, arr []byte) {
 	defer wg.Done()
 	body := test + "/balances"
@@ -171,6 +190,8 @@ func TestOne(t *testing.T) {
 		go testData(&wg, t, arr)
 		wg.Add(1)
 		go testBalTxs(&wg, t, arr)
+		wg.Add(1)
+		go testUtxoTxs(&wg, t, arr)
 		wg.Add(1)
 		go testBalances(&wg, t, arr)
 		wg.Add(1)

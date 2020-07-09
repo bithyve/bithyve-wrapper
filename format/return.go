@@ -1,5 +1,10 @@
 package format
 
+type UtxoTxReturn struct {
+	Utxos        [][]Utxo             `json:"Utxos"`
+	Transactions []MultigetAddrReturn `json:"Txs"`
+}
+
 // BalTxReturn is a struct used for the baltxs endpoint
 type BalTxReturn struct {
 	Balance      BalanceReturn
