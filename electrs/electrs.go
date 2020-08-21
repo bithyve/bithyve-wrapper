@@ -31,6 +31,9 @@ func SetURL(main, fallback string) {
 // CurrentBlockHeight gets the current block height from the blockchain
 func CurrentBlockHeight() (float64, error) {
 	body := ElectrsURL + "/blocks/tip/height"
+	if logs {
+		log.Println(body)
+	}
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("calling fallback URL")
@@ -48,6 +51,9 @@ func CurrentBlockHeight() (float64, error) {
 // GetBalanceCount gets the total incoming balance
 func GetBalanceCount(addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
+	if logs {
+		log.Println(body)
+	}
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("calling fallback URL")
@@ -72,6 +78,9 @@ func GetBalanceCount(addr string) (float64, float64) {
 // GetBalanceAddress gets the net balance of an address
 func GetBalanceAddress(addr string) (float64, float64) {
 	body := ElectrsURL + "/address/" + addr
+	if logs {
+		log.Println(body)
+	}
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("calling fallback URL")
@@ -98,6 +107,9 @@ func GetBalanceAddress(addr string) (float64, float64) {
 func GetTxsAddress(addr string) ([]format.Tx, error) {
 	var x []format.Tx
 	body := ElectrsURL + "/address/" + addr + "/txs"
+	if logs {
+		log.Println(body)
+	}
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("calling fallback URL")
@@ -122,6 +134,9 @@ func GetTxsAddress(addr string) ([]format.Tx, error) {
 func GetUtxosAddress(addr string) ([]format.Utxo, error) {
 	var x []format.Utxo
 	body := ElectrsURL + "/address/" + addr + "/utxo"
+	if logs {
+		log.Println(body)
+	}
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		log.Println("calling fallback URL")
@@ -148,6 +163,9 @@ func GetUtxosAddress(addr string) ([]format.Utxo, error) {
 func GetFeeEstimates() (format.FeeResponse, error) {
 	var x format.FeeResponse
 	body := ElectrsURL + "/fee-estimates"
+	if logs {
+		log.Println(body)
+	}
 	data, err := erpc.GetRequest(body)
 	if err != nil {
 		body = FallbackURL + "/fee-estimates"

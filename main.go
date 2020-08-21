@@ -16,6 +16,7 @@ import (
 var opts struct {
 	Mainnet bool `short:"m" description:"Connect to mainnet"`
 	Test    bool `short:"t" description:"Use for testing"`
+	Logs    bool `short:"l" description:"Testing logs"`
 }
 
 func startHandlers() {
@@ -44,6 +45,10 @@ func main() {
 	if opts.Mainnet {
 		log.Println("connecting to electrs mainnet")
 		electrs.SetMainnet()
+	}
+
+	if opts.Logs {
+		electrs.ToggleLogs()
 	}
 
 	if opts.Test {
