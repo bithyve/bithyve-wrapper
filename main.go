@@ -16,6 +16,7 @@ import (
 var opts struct {
 	Mainnet bool `short:"m" description:"Connect to mainnet"`
 	Test    bool `short:"t" description:"Use for testing"`
+	Logs    bool `short:"l" description:"Testing logs"`
 }
 
 func startHandlers() {
@@ -27,23 +28,29 @@ func startHandlers() {
 	MultiTxs()
 
 	erpc.SetupPingHandler()
-	GetFees()
+	GetFees(opts.Mainnet)
+	GetFeesE(opts.Mainnet)
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
 }
 
 func main() {
-	startHandlers()
 
 	_, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	startHandlers()
+
 	if opts.Mainnet {
 		log.Println("connecting to electrs mainnet")
 		electrs.SetMainnet()
+	}
+
+	if opts.Logs {
+		electrs.ToggleLogs()
 	}
 
 	if opts.Test {
