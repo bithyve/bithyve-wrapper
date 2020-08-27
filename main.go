@@ -29,6 +29,7 @@ func startHandlers() {
 
 	erpc.SetupPingHandler()
 	GetFees(opts.Mainnet)
+	GetFeesE(opts.Mainnet)
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
