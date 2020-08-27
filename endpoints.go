@@ -346,11 +346,29 @@ func MultiTxs() {
 }
 
 // GetFees gets the current fee estimate from electrs
-func GetFees() {
+func GetFees(mainnet bool) {
 	http.HandleFunc("/fees", func(w http.ResponseWriter, r *http.Request) {
 		err := erpc.CheckPost(w, r)
 		if err != nil {
 			log.Println(err)
+			return
+		}
+
+		if !mainnet {
+			var temp format.FeeResponse
+			temp.Two = 5.0
+			temp.Three = 4.2
+			temp.Four = 3.9
+			temp.Five = 3.1
+			temp.Six = 2.8
+			temp.Ten = 2.0
+			temp.Twenty = 1.7
+			temp.TwentyFive = 1.6
+			temp.OneFourFour = 1.1
+			temp.FiveZeroFour = 1.01
+			temp.OneThousandEight = 1.0
+
+			erpc.MarshalSend(w, temp)
 			return
 		}
 

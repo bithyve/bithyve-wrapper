@@ -28,19 +28,20 @@ func startHandlers() {
 	MultiTxs()
 
 	erpc.SetupPingHandler()
-	GetFees()
+	GetFees(opts.Mainnet)
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
 }
 
 func main() {
-	startHandlers()
 
 	_, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	startHandlers()
 
 	if opts.Mainnet {
 		log.Println("connecting to electrs mainnet")
