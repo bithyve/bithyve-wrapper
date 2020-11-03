@@ -74,6 +74,55 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	return nodups, nil
 }
 
+func checkReqEI(w http.ResponseWriter, r *http.Request) ([]string, []string, error) {
+	var earr, iarr []string
+	err := erpc.CheckPost(w, r)
+	if err != nil {
+		log.Println(err)
+		return earr, iarr, err
+	}
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
+		log.Println(err)
+		return earr, iarr, err
+	}
+	var rf format.EIRequestFormat
+	err = json.Unmarshal(data, &rf)
+	if err != nil {
+		erpc.ResponseHandler(w, erpc.StatusInternalServerError, JSONError)
+		log.Println(err)
+		return earr, iarr, err
+	}
+
+	earr = rf.ExternalAddresses
+	iarr = rf.InternalAddresses
+
+	// filter through list to remove duplicates
+	nodupsMap1 := make(map[string]bool)
+	var nodups1 []string
+
+	for _, elem := range earr {
+		if _, value := nodupsMap1[elem]; !value {
+			nodupsMap1[elem] = true
+			nodups1 = append(nodups1, elem)
+		}
+	}
+
+	// filter through list to remove duplicates
+	nodupsMap2 := make(map[string]bool)
+	var nodups2 []string
+
+	for _, elem := range iarr {
+		if _, value := nodupsMap2[elem]; !value {
+			nodupsMap2[elem] = true
+			nodups2 = append(nodups2, elem)
+		}
+	}
+
+	return nodups1, nodups2, nil
+}
+
 func addrHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string, currentBh float64) {
 	defer wg.Done()
 
@@ -144,6 +193,67 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 					} else {
 						x[i].Transactions[j].NumberofConfirmations = 0
 					}
+				}
+				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+					electrs.GetBalanceCount(elem)
+			} else {
+				log.Println("error in gettxsaddress call: ", err)
+			}
+		}
+	}
+
+	return x, nil
+}
+
+func multiAddrEI(w http.ResponseWriter, r *http.Request,
+	earr, iarr []string) ([]format.MultigetAddrReturn, error) {
+
+	var arr []string
+	arr = append(earr, iarr...)
+
+	x := make([]format.MultigetAddrReturn, len(arr))
+	currentBh, err := electrs.CurrentBlockHeight()
+	if err != nil {
+		erpc.ResponseHandler(w, erpc.StatusInternalServerError, APIError)
+		log.Println(err)
+		return x, err
+	}
+
+	if opts.Mainnet {
+		var wg1 sync.WaitGroup
+		var wg2 sync.WaitGroup
+
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			wg1.Add(1)
+			go addrHelper(&wg1, x, i, elem, currentBh)
+		}
+
+		wg1.Wait()
+
+		for i, elem := range arr {
+			wg2.Add(1)
+			go addrbalHelper(&wg2, x, i, elem)
+		}
+
+		wg2.Wait()
+	} else {
+		for i, elem := range arr {
+			x[i].Address = elem // store the address of the passed elements
+			allTxs, err := electrs.GetTxsAddress(elem)
+			if err == nil {
+
+				x[i].TotalTransactions = float64(len(allTxs))
+				x[i].Transactions = allTxs
+				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+				for j := range x[i].Transactions {
+					if x[i].Transactions[j].Status.Confirmed {
+						x[i].Transactions[j].NumberofConfirmations =
+							currentBh - x[i].Transactions[j].Status.BlockHeight + 1
+					} else {
+						x[i].Transactions[j].NumberofConfirmations = 0
+					}
+					x[i].Transactions[j].Categorize(earr, iarr)
 				}
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 					electrs.GetBalanceCount(elem)
@@ -301,19 +411,22 @@ func MultiUtxoTxs() {
 // NewMultiUtxoTxs is a new endpoint
 func NewMultiUtxoTxs() {
 	http.HandleFunc("/nutxotxs", func(w http.ResponseWriter, r *http.Request) {
-		arr, err := checkReq(w, r)
+		earr, iarr, err := checkReqEI(w, r)
 		if err != nil {
 			return
 		}
 
+		var arr []string
+		arr = append(earr, iarr...)
+
 		var wg sync.WaitGroup
 		var ret format.UtxoTxReturn
-		ret.Utxos = make([][]format.Utxo, len(arr))
+		ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
 
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
 			defer wg.Done()
-			ret.Transactions, err = multiAddr(w, r, arr)
+			ret.Transactions, err = multiAddrEI(w, r, earr, iarr)
 			if err != nil {
 				return
 			}
