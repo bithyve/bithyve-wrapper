@@ -87,6 +87,12 @@ type Tx struct {
 		BlockTime   float64 `json:"block_time"`
 	}
 	NumberofConfirmations float64
+	// needed for custom endpoint
+	TransactionType    string
+	SenderAddresses    []string
+	SentAmount         float64
+	ReceivedAmount     float64
+	RecipientAddresses []string
 }
 
 // FeeResponse is a struct that is returned when a fee query is made
