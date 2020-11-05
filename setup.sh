@@ -5,11 +5,11 @@ sudo apt-get update
 sudo apt-get -y upgrade
 sudo apt-get install build-essential
 
-wget https://dl.google.com/go/go1.13.8.linux-amd64.tar.gz
-sudo tar -xvf go1.13.8.linux-amd64.tar.gz
-sudo mv go /usr/local
+wget https://dl.google.com/go/go1.14.1.linux-amd64.tar.gz
+sudo tar -xvf go1.14.1.linux-amd64.tar.gz
+sudo mv go /usr/bin/
 
-export GOROOT=/usr/local/go
+export GOROOT=/usr/bin/go
 export GOPATH=$HOME/go
 export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 go version
