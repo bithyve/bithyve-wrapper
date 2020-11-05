@@ -1,5 +1,6 @@
 package format
 
+// UtxoTxReturn is the return structure used in /utxotxs
 type UtxoTxReturn struct {
 	Utxos        [][]Utxo             `json:"Utxos"`
 	Transactions []MultigetAddrReturn `json:"Txs"`

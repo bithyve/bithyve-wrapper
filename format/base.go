@@ -1,8 +1,18 @@
 package format
 
+import (
+	"math"
+	"sort"
+)
+
 // RequestFormat is the format in which incoming requests hsould arrive for the wrapper to process
 type RequestFormat struct {
 	Addresses []string `json:"addresses"`
+}
+
+type EIRequestFormat struct {
+	ExternalAddresses []string `json:"external"`
+	InternalAddresses []string `json:"internal"`
 }
 
 // Balance is a copy of the struct esplora returns for balances
@@ -87,6 +97,71 @@ type Tx struct {
 		BlockTime   float64 `json:"block_time"`
 	}
 	NumberofConfirmations float64
+	// needed for custom endpoint
+	TransactionType    string
+	SenderAddresses    []string
+	SentAmount         float64
+	ReceivedAmount     float64
+	Amount float64
+	RecipientAddresses []string
+}
+
+// Categorize does some nifty operations on the tx
+func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
+	var inputs = tx.Vin
+	var outputs = tx.Vout
+	var value, amountToSelf = float64(0), float64(0)
+	var probableRecipientList []string
+	var probableSenderList []string
+	var selfRecipientList []string
+	var selfSenderList []string
+
+	for _, input := range inputs {
+		var address = input.PrevOut.ScriptpubkeyAddress
+		if len(address) == 0 {
+			continue
+		}
+		if sort.SearchStrings(InUseAddresses, address) != 0 {
+			value -= input.PrevOut.Value
+			selfSenderList = append(selfSenderList, address)
+		} else {
+			probableSenderList = append(probableSenderList, address)
+		}
+	}
+
+	for _, output := range outputs {
+		var address = output.ScriptpubkeyAddress
+		if len(address) == 0 {
+			continue
+		}
+		if sort.SearchStrings(InUseAddresses, address) != 0 {
+			value += output.Value
+			if sort.SearchStrings(ExternalAddresses, address) != 0 {
+				amountToSelf += output.Value
+				selfRecipientList = append(selfRecipientList, address)
+			}
+		} else {
+			probableRecipientList = append(probableRecipientList, address)
+		}
+	}
+
+	if value > 0 {
+		tx.TransactionType = "Received"
+		tx.SenderAddresses = probableSenderList
+	} else {
+		if value+math.Abs(tx.Fee) == 0 {
+			tx.TransactionType = "Self"
+			tx.SentAmount = math.Abs(amountToSelf) + tx.Fee
+			tx.ReceivedAmount = math.Abs(amountToSelf)
+			tx.SenderAddresses = selfSenderList
+			tx.RecipientAddresses = selfRecipientList
+		} else {
+			tx.TransactionType = "Sent"
+			tx.RecipientAddresses = probableRecipientList
+		}
+	}
+
+    tx.Amount = value;
 }
 
 // FeeResponse is a struct that is returned when a fee query is made

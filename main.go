@@ -26,7 +26,8 @@ func startHandlers() {
 	MultiUtxos()
 	MultiBalances()
 	MultiTxs()
-
+	NewMultiUtxoTxs()
+	
 	erpc.SetupPingHandler()
 	GetFees(opts.Mainnet)
 	GetFeesE(opts.Mainnet)
