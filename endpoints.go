@@ -408,6 +408,12 @@ func MultiUtxoTxs() {
 	})
 }
 
+func TestRandom() {
+	http.HandleFunc("/cool", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("cool!")
+	})
+}
+
 // NewMultiUtxoTxs is a new endpoint
 func NewMultiUtxoTxs() {
 	http.HandleFunc("/nutxotxs", func(w http.ResponseWriter, r *http.Request) {
