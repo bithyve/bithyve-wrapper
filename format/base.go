@@ -163,6 +163,8 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 	}
 
 	tx.Amount = math.Abs(value)
+	tx.Vin = nil
+	tx.Vout = nil
 }
 
 // FeeResponse is a struct that is returned when a fee query is made
