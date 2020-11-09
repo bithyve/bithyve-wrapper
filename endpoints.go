@@ -256,15 +256,14 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 						} else {
 							x[i].Transactions[j].NumberofConfirmations = 0
 						}
-
 					}
-					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-						electrs.GetBalanceCount(elem)
 					var wg3 sync.WaitGroup
 					for j := range x[i].Transactions {
 						wg3.Add(1)
 						go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
 							defer wg.Done()
+							x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+								electrs.GetBalanceCount(elem)
 							x[i].Transactions[j].Categorize(earr, iarr)
 						}(&wg3, x, j)
 					}
