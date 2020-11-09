@@ -238,31 +238,44 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 
 		wg2.Wait()
 	} else {
+		var wg4 sync.WaitGroup
 		for i, elem := range arr {
-			x[i].Address = elem // store the address of the passed elements
-			allTxs, err := electrs.GetTxsAddress(elem)
-			if err == nil {
+			wg4.Add(1)
+			go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string) {
+				defer wg.Done()
+				x[i].Address = elem
+				allTxs, err := electrs.GetTxsAddress(elem)
+				if err == nil {
+					x[i].TotalTransactions = float64(len(allTxs))
+					x[i].Transactions = allTxs
+					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+					for j := range x[i].Transactions {
+						if x[i].Transactions[j].Status.Confirmed {
+							x[i].Transactions[j].NumberofConfirmations =
+								currentBh - x[i].Transactions[j].Status.BlockHeight + 1
+						} else {
+							x[i].Transactions[j].NumberofConfirmations = 0
+						}
 
-				x[i].TotalTransactions = float64(len(allTxs))
-				x[i].Transactions = allTxs
-				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
-				for j := range x[i].Transactions {
-					if x[i].Transactions[j].Status.Confirmed {
-						x[i].Transactions[j].NumberofConfirmations =
-							currentBh - x[i].Transactions[j].Status.BlockHeight + 1
-					} else {
-						x[i].Transactions[j].NumberofConfirmations = 0
 					}
-					x[i].Transactions[j].Categorize(earr, iarr)
+					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+						electrs.GetBalanceCount(elem)
+					var wg3 sync.WaitGroup
+					for j := range x[i].Transactions {
+						wg3.Add(1)
+						go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
+							defer wg.Done()
+							x[i].Transactions[j].Categorize(earr, iarr)
+						}(&wg3, x, j)
+					}
+					wg3.Wait()
+				} else {
+					log.Println("error in gettxsaddress call: ", err)
 				}
-				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-					electrs.GetBalanceCount(elem)
-			} else {
-				log.Println("error in gettxsaddress call: ", err)
-			}
+			}(&wg4, x, i, elem)
 		}
+		wg4.Wait()
 	}
-
 	return x, nil
 }
 

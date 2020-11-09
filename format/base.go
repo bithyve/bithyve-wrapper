@@ -102,7 +102,7 @@ type Tx struct {
 	SenderAddresses    []string
 	SentAmount         float64
 	ReceivedAmount     float64
-	Amount float64
+	Amount             float64
 	RecipientAddresses []string
 }
 
@@ -145,6 +145,7 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		}
 	}
 
+	// log.Println("VALUE: ", value, value+math.Abs(amountToSelf)+tx.Fee)
 	if value > 0 {
 		tx.TransactionType = "Received"
 		tx.SenderAddresses = probableSenderList
@@ -161,7 +162,7 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		}
 	}
 
-    tx.Amount = value;
+	tx.Amount = math.Abs(value)
 }
 
 // FeeResponse is a struct that is returned when a fee query is made
