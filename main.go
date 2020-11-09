@@ -14,6 +14,7 @@ import (
 )
 
 var opts struct {
+	DevEnv  bool `short:"d" description:"Start dev env"`
 	Mainnet bool `short:"m" description:"Connect to mainnet"`
 	Test    bool `short:"t" description:"Use for testing"`
 	Logs    bool `short:"l" description:"Testing logs"`
@@ -51,7 +52,13 @@ func main() {
 	}
 
 	if opts.Logs {
+		log.Println("starting in logs mode")
 		electrs.ToggleLogs()
+	}
+
+	if opts.DevEnv {
+		log.Println("starting in devenv mode")
+		electrs.SetDevEnv()
 	}
 
 	if opts.Test {
