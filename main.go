@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 
 	"github.com/bithyve/bithyve-wrapper/electrs"
 
@@ -39,6 +40,8 @@ func startHandlers() {
 
 func main() {
 
+	log.Println("wrapper is running on: ", runtime.NumCPU(), " cores")
+	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	_, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
 		log.Fatal(err)
