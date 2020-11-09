@@ -277,7 +277,15 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 		}
 		wg4.Wait()
 	}
-	return x, nil
+
+	var y []format.MultigetAddrReturn
+
+	for _, elem := range x {
+		if elem.Address != "" {
+			y = append(y, elem)
+		}
+	}
+	return y, nil
 }
 
 func balHelper(wg *sync.WaitGroup, elem string, x *format.BalanceReturn) {
@@ -435,7 +443,10 @@ func NewMultiUtxoTxs() {
 
 		var wg sync.WaitGroup
 		var ret format.UtxoTxReturn
-		ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
+
+		var tempUtxos [][]format.Utxo
+		tempUtxos = make([][]format.Utxo, len(earr)+len(iarr))
+		// ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
 
 		wg.Add(1)
 		go func(wg *sync.WaitGroup) {
@@ -449,11 +460,16 @@ func NewMultiUtxoTxs() {
 		for i, elem := range arr {
 			// send the request out
 			wg.Add(1)
-			go utxoHelper(&wg, ret.Utxos, i, elem)
+			go utxoHelper(&wg, tempUtxos, i, elem)
 		}
 
 		wg.Wait()
 		// we have both utxos and txs now
+		for _, elem := range tempUtxos {
+			if len(elem) != 0 {
+				ret.Utxos = append(ret.Utxos, elem)
+			}
+		}
 
 		erpc.MarshalSend(w, ret)
 	})
