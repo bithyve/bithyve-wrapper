@@ -265,7 +265,7 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 								defer wg.Done()
 								x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 									electrs.GetBalanceCount(elem)
-								x[i].Transactions[j].Categorize(earr, iarr)
+								x[i].Transactions[j].Categorize(earr, append(earr, iarr...))
 							}(&wg3, x, j)
 						}
 						wg3.Wait()
