@@ -243,31 +243,33 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 			wg4.Add(1)
 			go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string) {
 				defer wg.Done()
-				x[i].Address = elem
 				allTxs, err := electrs.GetTxsAddress(elem)
 				if err == nil {
-					x[i].TotalTransactions = float64(len(allTxs))
-					x[i].Transactions = allTxs
-					x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
-					for j := range x[i].Transactions {
-						if x[i].Transactions[j].Status.Confirmed {
-							x[i].Transactions[j].NumberofConfirmations =
-								currentBh - x[i].Transactions[j].Status.BlockHeight + 1
-						} else {
-							x[i].Transactions[j].NumberofConfirmations = 0
+					if len(allTxs) != 0 {
+						x[i].Address = elem
+						x[i].TotalTransactions = float64(len(allTxs))
+						x[i].Transactions = allTxs
+						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+						for j := range x[i].Transactions {
+							if x[i].Transactions[j].Status.Confirmed {
+								x[i].Transactions[j].NumberofConfirmations =
+									currentBh - x[i].Transactions[j].Status.BlockHeight + 1
+							} else {
+								x[i].Transactions[j].NumberofConfirmations = 0
+							}
 						}
+						var wg3 sync.WaitGroup
+						for j := range x[i].Transactions {
+							wg3.Add(1)
+							go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
+								defer wg.Done()
+								x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+									electrs.GetBalanceCount(elem)
+								x[i].Transactions[j].Categorize(earr, iarr)
+							}(&wg3, x, j)
+						}
+						wg3.Wait()
 					}
-					var wg3 sync.WaitGroup
-					for j := range x[i].Transactions {
-						wg3.Add(1)
-						go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
-							defer wg.Done()
-							x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-								electrs.GetBalanceCount(elem)
-							x[i].Transactions[j].Categorize(earr, iarr)
-						}(&wg3, x, j)
-					}
-					wg3.Wait()
 				} else {
 					log.Println("error in gettxsaddress call: ", err)
 				}
@@ -417,12 +419,6 @@ func MultiUtxoTxs() {
 
 		wg.Wait()
 		erpc.MarshalSend(w, ret)
-	})
-}
-
-func TestRandom() {
-	http.HandleFunc("/cool", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("cool!")
 	})
 }
 
