@@ -265,10 +265,18 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 								defer wg.Done()
 								x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 									electrs.GetBalanceCount(elem)
-								x[i].Transactions[j].Categorize(earr, append(earr, iarr...))
 							}(&wg3, x, j)
 						}
 						wg3.Wait()
+						var wg6 sync.WaitGroup
+						for j := range x[i].Transactions {
+							wg6.Add(1)
+							go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
+								defer wg.Done()
+								x[i].Transactions[j].Categorize(earr, append(earr, iarr...))
+							}(&wg6, x, j)
+						}
+						wg6.Wait()
 					}
 				} else {
 					log.Println("error in gettxsaddress call: ", err)
