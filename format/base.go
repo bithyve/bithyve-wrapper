@@ -2,7 +2,6 @@ package format
 
 import (
 	"math"
-	"sort"
 )
 
 // RequestFormat is the format in which incoming requests hsould arrive for the wrapper to process
@@ -106,6 +105,15 @@ type Tx struct {
 	RecipientAddresses []string
 }
 
+func hunt(addresses []string, elem string) bool {
+	for _, address := range addresses {
+		if address == elem {
+			return true
+		}
+	}
+	return false
+}
+
 // Categorize does some nifty operations on the tx
 func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 	var inputs = tx.Vin
@@ -121,7 +129,7 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		if len(address) == 0 {
 			continue
 		}
-		if sort.SearchStrings(InUseAddresses, address) != 0 {
+		if hunt(InUseAddresses, address) {
 			value -= input.PrevOut.Value
 			selfSenderList = append(selfSenderList, address)
 		} else {
@@ -134,9 +142,9 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		if len(address) == 0 {
 			continue
 		}
-		if sort.SearchStrings(InUseAddresses, address) != 0 {
+		if hunt(InUseAddresses, address) {
 			value += output.Value
-			if sort.SearchStrings(ExternalAddresses, address) != 0 {
+			if hunt(ExternalAddresses, address) {
 				amountToSelf += output.Value
 				selfRecipientList = append(selfRecipientList, address)
 			}
