@@ -6,6 +6,12 @@ type UtxoTxReturn struct {
 	Transactions []MultigetAddrReturn `json:"Txs"`
 }
 
+// EIUtxoReturn is the reutrn structure used in /nutxotxs
+type EIUtxoReturn map[string]struct {
+	Utxos        [][]Utxo             `json:"Utxos"`
+	Transactions []MultigetAddrReturn `json:"Txs"`
+}
+
 // BalTxReturn is a struct used for the baltxs endpoint
 type BalTxReturn struct {
 	Balance      BalanceReturn

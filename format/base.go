@@ -9,9 +9,15 @@ type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
 
-type EIRequestFormat struct {
-	ExternalAddresses []string `json:"external"`
-	InternalAddresses []string `json:"internal"`
+type EIHelper struct {
+	ExternalAddresses []string `json:"External"`
+	InternalAddresses []string `json:"Internal"`
+}
+
+// EIRequestFormat is the return format used for the nutoxs endpoint
+type EIRequestFormat map[string]struct {
+	ExternalAddresses []string `json:"External"`
+	InternalAddresses []string `json:"Internal"`
 }
 
 // Balance is a copy of the struct esplora returns for balances
