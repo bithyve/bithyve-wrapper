@@ -282,6 +282,7 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 							wg6.Add(1)
 							go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
 								defer wg.Done()
+								x[i].Transactions[j].Categorize(earr, append(earr, iarr...))
 							}(&wg6, x, j)
 						}
 						wg6.Wait()
@@ -461,11 +462,9 @@ func NewMultiUtxoTxs() {
 			earr := elem.ExternalAddresses
 			arr = append(earr, iarr...)
 			var wg sync.WaitGroup
-			var tempUtxos [][]format.Utxo
 			var err error
-
-			tempUtxos = make([][]format.Utxo, len(earr)+len(iarr))
 			var temp format.UtxoTxReturn
+			tempUtxos := make([][]format.Utxo, len(earr)+len(iarr))
 			// ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
 			wg.Add(1)
 			go func(wg *sync.WaitGroup) {
