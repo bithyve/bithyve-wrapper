@@ -15,10 +15,7 @@ type EIHelper struct {
 }
 
 // EIRequestFormat is the return format used for the nutoxs endpoint
-type EIRequestFormat map[string]struct {
-	ExternalAddresses []string `json:"External"`
-	InternalAddresses []string `json:"Internal"`
-}
+type EIRequestFormat map[string]EIHelper
 
 // Balance is a copy of the struct esplora returns for balances
 type Balance struct {

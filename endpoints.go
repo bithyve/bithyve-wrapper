@@ -456,42 +456,48 @@ func NewMultiUtxoTxs() {
 		}
 
 		ret := make(format.EIUtxoReturn, len(rf))
+		var wg2 sync.WaitGroup
 		for key, elem := range rf {
-			var arr []string
-			iarr := elem.InternalAddresses
-			earr := elem.ExternalAddresses
-			arr = append(earr, iarr...)
-			var wg sync.WaitGroup
-			var err error
-			var temp format.UtxoTxReturn
-			tempUtxos := make([][]format.Utxo, len(earr)+len(iarr))
-			// ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
-			wg.Add(1)
-			go func(wg *sync.WaitGroup) {
-				defer wg.Done()
-				temp.Transactions, err = multiAddrEI(w, r, earr, iarr)
-				if err != nil {
-					return
-				}
-			}(&wg)
-
-			for i, elem := range arr {
-				// send the request out
+			wg2.Add(1)
+			go func(wg2 *sync.WaitGroup, key string, elem format.EIHelper) {
+				defer wg2.Done()
+				var arr []string
+				iarr := elem.InternalAddresses
+				earr := elem.ExternalAddresses
+				arr = append(earr, iarr...)
+				var wg sync.WaitGroup
+				var err error
+				var temp format.UtxoTxReturn
+				tempUtxos := make([][]format.Utxo, len(earr)+len(iarr))
+				// ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
 				wg.Add(1)
-				go utxoHelper(&wg, tempUtxos, i, elem)
-			}
+				go func(wg *sync.WaitGroup) {
+					defer wg.Done()
+					temp.Transactions, err = multiAddrEI(w, r, earr, iarr)
+					if err != nil {
+						return
+					}
+				}(&wg)
 
-			wg.Wait()
-			// we have both utxos and txs now
-			for _, elem := range tempUtxos {
-				if len(elem) != 0 {
-					temp.Utxos = append(temp.Utxos, elem)
+				for i, elem := range arr {
+					// send the request out
+					wg.Add(1)
+					go utxoHelper(&wg, tempUtxos, i, elem)
 				}
-			}
 
-			ret[key] = temp
+				wg.Wait()
+				// we have both utxos and txs now
+				for _, elem := range tempUtxos {
+					if len(elem) != 0 {
+						temp.Utxos = append(temp.Utxos, elem)
+					}
+				}
+
+				ret[key] = temp
+			}(&wg2, key, elem)
 		}
 
+		wg2.Wait()
 		erpc.MarshalSend(w, ret)
 	})
 }
