@@ -191,7 +191,6 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 			x[i].Address = elem // store the address of the passed elements
 			allTxs, err := electrs.GetTxsAddress(elem)
 			if err == nil {
-
 				x[i].TotalTransactions = float64(len(allTxs))
 				x[i].Transactions = allTxs
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
@@ -202,6 +201,8 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 					} else {
 						x[i].Transactions[j].NumberofConfirmations = 0
 					}
+					x[i].Transactions[j].Vin = nil
+					x[i].Transactions[j].Vout = nil
 				}
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 					electrs.GetBalanceCount(elem)
@@ -492,11 +493,9 @@ func NewMultiUtxoTxs() {
 						temp.Utxos = append(temp.Utxos, elem)
 					}
 				}
-
 				ret[key] = temp
 			}(&wg2, key, elem)
 		}
-
 		wg2.Wait()
 		erpc.MarshalSend(w, ret)
 	})
