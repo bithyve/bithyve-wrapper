@@ -1,9 +1,21 @@
 package format
 
+import (
+	"math"
+)
+
 // RequestFormat is the format in which incoming requests hsould arrive for the wrapper to process
 type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
+
+type EIHelper struct {
+	ExternalAddresses []string `json:"External"`
+	InternalAddresses []string `json:"Internal"`
+}
+
+// EIRequestFormat is the return format used for the nutoxs endpoint
+type EIRequestFormat map[string]EIHelper
 
 // Balance is a copy of the struct esplora returns for balances
 type Balance struct {
@@ -87,6 +99,83 @@ type Tx struct {
 		BlockTime   float64 `json:"block_time"`
 	}
 	NumberofConfirmations float64
+	// needed for custom endpoint
+	TransactionType    string
+	SenderAddresses    []string
+	SentAmount         float64
+	ReceivedAmount     float64
+	Amount             float64
+	RecipientAddresses []string
+}
+
+func hunt(addresses []string, elem string) bool {
+	for _, address := range addresses {
+		if address == elem {
+			return true
+		}
+	}
+	return false
+}
+
+// Categorize does some nifty operations on the tx
+func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
+	var inputs = tx.Vin
+	var outputs = tx.Vout
+	var value, amountToSelf = float64(0), float64(0)
+	var probableRecipientList []string
+	var probableSenderList []string
+	var selfRecipientList []string
+	var selfSenderList []string
+
+	for _, input := range inputs {
+		var address = input.PrevOut.ScriptpubkeyAddress
+		if len(address) == 0 {
+			continue
+		}
+		if hunt(InUseAddresses, address) {
+			value -= input.PrevOut.Value
+			selfSenderList = append(selfSenderList, address)
+		} else {
+			probableSenderList = append(probableSenderList, address)
+		}
+	}
+
+	for _, output := range outputs {
+		var address = output.ScriptpubkeyAddress
+		if len(address) == 0 {
+			continue
+		}
+		if hunt(InUseAddresses, address) {
+			value += output.Value
+			if hunt(ExternalAddresses, address) {
+				amountToSelf += output.Value
+				selfRecipientList = append(selfRecipientList, address)
+			}
+		} else {
+			probableRecipientList = append(probableRecipientList, address)
+		}
+	}
+
+	// log.Println("VALUE: ", value, value+math.Abs(amountToSelf)+tx.Fee)
+	if value > 0 {
+		tx.TransactionType = "Received"
+		tx.SenderAddresses = probableSenderList
+	} else {
+		if value+math.Abs(tx.Fee) == 0 {
+			tx.TransactionType = "Self"
+			tx.SentAmount = math.Abs(amountToSelf) + tx.Fee
+			tx.ReceivedAmount = math.Abs(amountToSelf)
+			tx.SenderAddresses = selfSenderList
+			tx.RecipientAddresses = selfRecipientList
+		} else {
+			tx.TransactionType = "Sent"
+			tx.RecipientAddresses = probableRecipientList
+		}
+	}
+
+	tx.Amount = math.Abs(value)
+	tx.Vin = nil
+	tx.Vout = nil
 }
 
 // FeeResponse is a struct that is returned when a fee query is made

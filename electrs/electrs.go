@@ -22,6 +22,12 @@ func SetMainnet() {
 	FallbackURL = "https://blockstream.info/api"
 }
 
+// SetDevEnv sets dev env variables
+func SetDevEnv() {
+	ElectrsURL = "http://test-wrapper.bithyve.com"
+	FallbackURL = "https://blockstream.info/api"
+}
+
 // SetURL sets custom URLs for electrs and fallback
 func SetURL(main, fallback string) {
 	ElectrsURL = main

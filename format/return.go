@@ -1,9 +1,13 @@
 package format
 
+// UtxoTxReturn is the return structure used in /utxotxs
 type UtxoTxReturn struct {
 	Utxos        [][]Utxo             `json:"Utxos"`
 	Transactions []MultigetAddrReturn `json:"Txs"`
 }
+
+// EIUtxoReturn is the reutrn structure used in /nutxotxs
+type EIUtxoReturn map[string]UtxoTxReturn
 
 // BalTxReturn is a struct used for the baltxs endpoint
 type BalTxReturn struct {
