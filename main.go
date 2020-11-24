@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 
 	"github.com/bithyve/bithyve-wrapper/electrs"
 
@@ -14,6 +15,7 @@ import (
 )
 
 var opts struct {
+	DevEnv  bool `short:"d" description:"Start dev env"`
 	Mainnet bool `short:"m" description:"Connect to mainnet"`
 	Test    bool `short:"t" description:"Use for testing"`
 	Logs    bool `short:"l" description:"Testing logs"`
@@ -27,7 +29,7 @@ func startHandlers() {
 	MultiBalances()
 	MultiTxs()
 	NewMultiUtxoTxs()
-	
+
 	erpc.SetupPingHandler()
 	GetFees(opts.Mainnet)
 	GetFeesE(opts.Mainnet)
@@ -38,6 +40,8 @@ func startHandlers() {
 
 func main() {
 
+	log.Println("wrapper is running on: ", runtime.NumCPU(), " cores")
+	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	_, err := flags.ParseArgs(&opts, os.Args)
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +55,13 @@ func main() {
 	}
 
 	if opts.Logs {
+		log.Println("starting in logs mode")
 		electrs.ToggleLogs()
+	}
+
+	if opts.DevEnv {
+		log.Println("starting in devenv mode")
+		electrs.SetDevEnv()
 	}
 
 	if opts.Test {

@@ -74,53 +74,62 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 	return nodups, nil
 }
 
-func checkReqEI(w http.ResponseWriter, r *http.Request) ([]string, []string, error) {
+func checkReqEI(w http.ResponseWriter, r *http.Request) (format.EIRequestFormat, error) {
 	var earr, iarr []string
+	var rf format.EIRequestFormat
 	err := erpc.CheckPost(w, r)
 	if err != nil {
 		log.Println(err)
-		return earr, iarr, err
+		return rf, err
 	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		erpc.ResponseHandler(w, erpc.StatusInternalServerError)
 		log.Println(err)
-		return earr, iarr, err
+		return rf, err
 	}
-	var rf format.EIRequestFormat
 	err = json.Unmarshal(data, &rf)
 	if err != nil {
 		erpc.ResponseHandler(w, erpc.StatusInternalServerError, JSONError)
 		log.Println(err)
-		return earr, iarr, err
+		return rf, err
 	}
 
-	earr = rf.ExternalAddresses
-	iarr = rf.InternalAddresses
+	// now we have an array of ids, earr, iarr. Need to loop through them
+	for key, elem := range rf {
+		earr = elem.ExternalAddresses
+		iarr = elem.InternalAddresses
+		// filter through list to remove duplicates
+		nodupsMap1 := make(map[string]bool)
+		var nodups1 []string
 
-	// filter through list to remove duplicates
-	nodupsMap1 := make(map[string]bool)
-	var nodups1 []string
-
-	for _, elem := range earr {
-		if _, value := nodupsMap1[elem]; !value {
-			nodupsMap1[elem] = true
-			nodups1 = append(nodups1, elem)
+		for _, elem := range earr {
+			if _, value := nodupsMap1[elem]; !value {
+				nodupsMap1[elem] = true
+				nodups1 = append(nodups1, elem)
+			}
 		}
-	}
 
-	// filter through list to remove duplicates
-	nodupsMap2 := make(map[string]bool)
-	var nodups2 []string
+		// filter through list to remove duplicates
+		nodupsMap2 := make(map[string]bool)
+		var nodups2 []string
 
-	for _, elem := range iarr {
-		if _, value := nodupsMap2[elem]; !value {
-			nodupsMap2[elem] = true
-			nodups2 = append(nodups2, elem)
+		for _, elem := range iarr {
+			if _, value := nodupsMap2[elem]; !value {
+				nodupsMap2[elem] = true
+				nodups2 = append(nodups2, elem)
+			}
 		}
+		var temp struct {
+			ExternalAddresses []string `json:"External"`
+			InternalAddresses []string `json:"Internal"`
+		}
+		temp.ExternalAddresses = nodups1
+		temp.InternalAddresses = nodups2
+		rf[key] = temp
 	}
 
-	return nodups1, nodups2, nil
+	return rf, nil
 }
 
 func addrHelper(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string, currentBh float64) {
@@ -182,7 +191,6 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 			x[i].Address = elem // store the address of the passed elements
 			allTxs, err := electrs.GetTxsAddress(elem)
 			if err == nil {
-
 				x[i].TotalTransactions = float64(len(allTxs))
 				x[i].Transactions = allTxs
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
@@ -193,6 +201,8 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 					} else {
 						x[i].Transactions[j].NumberofConfirmations = 0
 					}
+					x[i].Transactions[j].Vin = nil
+					x[i].Transactions[j].Vout = nil
 				}
 				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
 					electrs.GetBalanceCount(elem)
@@ -238,32 +248,62 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 
 		wg2.Wait()
 	} else {
+		var wg4 sync.WaitGroup
 		for i, elem := range arr {
-			x[i].Address = elem // store the address of the passed elements
-			allTxs, err := electrs.GetTxsAddress(elem)
-			if err == nil {
-
-				x[i].TotalTransactions = float64(len(allTxs))
-				x[i].Transactions = allTxs
-				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
-				for j := range x[i].Transactions {
-					if x[i].Transactions[j].Status.Confirmed {
-						x[i].Transactions[j].NumberofConfirmations =
-							currentBh - x[i].Transactions[j].Status.BlockHeight + 1
-					} else {
-						x[i].Transactions[j].NumberofConfirmations = 0
+			wg4.Add(1)
+			go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, i int, elem string) {
+				defer wg.Done()
+				allTxs, err := electrs.GetTxsAddress(elem)
+				if err == nil {
+					if len(allTxs) != 0 {
+						x[i].Address = elem
+						x[i].TotalTransactions = float64(len(allTxs))
+						x[i].Transactions = allTxs
+						x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions = 0, 0
+						for j := range x[i].Transactions {
+							if x[i].Transactions[j].Status.Confirmed {
+								x[i].Transactions[j].NumberofConfirmations =
+									currentBh - x[i].Transactions[j].Status.BlockHeight + 1
+							} else {
+								x[i].Transactions[j].NumberofConfirmations = 0
+							}
+						}
+						var wg3 sync.WaitGroup
+						for j := range x[i].Transactions {
+							wg3.Add(1)
+							go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
+								defer wg.Done()
+								x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
+									electrs.GetBalanceCount(elem)
+							}(&wg3, x, j)
+						}
+						wg3.Wait()
+						var wg6 sync.WaitGroup
+						for j := range x[i].Transactions {
+							wg6.Add(1)
+							go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
+								defer wg.Done()
+								x[i].Transactions[j].Categorize(earr, append(earr, iarr...))
+							}(&wg6, x, j)
+						}
+						wg6.Wait()
 					}
-					x[i].Transactions[j].Categorize(earr, iarr)
+				} else {
+					log.Println("error in gettxsaddress call: ", err)
 				}
-				x[i].ConfirmedTransactions, x[i].UnconfirmedTransactions =
-					electrs.GetBalanceCount(elem)
-			} else {
-				log.Println("error in gettxsaddress call: ", err)
-			}
+			}(&wg4, x, i, elem)
 		}
+		wg4.Wait()
 	}
 
-	return x, nil
+	var y []format.MultigetAddrReturn
+
+	for _, elem := range x {
+		if elem.Address != "" {
+			y = append(y, elem)
+		}
+	}
+	return y, nil
 }
 
 func balHelper(wg *sync.WaitGroup, elem string, x *format.BalanceReturn) {
@@ -411,36 +451,52 @@ func MultiUtxoTxs() {
 // NewMultiUtxoTxs is a new endpoint
 func NewMultiUtxoTxs() {
 	http.HandleFunc("/nutxotxs", func(w http.ResponseWriter, r *http.Request) {
-		earr, iarr, err := checkReqEI(w, r)
+		rf, err := checkReqEI(w, r)
 		if err != nil {
 			return
 		}
 
-		var arr []string
-		arr = append(earr, iarr...)
+		ret := make(format.EIUtxoReturn, len(rf))
+		var wg2 sync.WaitGroup
+		for key, elem := range rf {
+			wg2.Add(1)
+			go func(wg2 *sync.WaitGroup, key string, elem format.EIHelper) {
+				defer wg2.Done()
+				var arr []string
+				iarr := elem.InternalAddresses
+				earr := elem.ExternalAddresses
+				arr = append(earr, iarr...)
+				var wg sync.WaitGroup
+				var err error
+				var temp format.UtxoTxReturn
+				tempUtxos := make([][]format.Utxo, len(earr)+len(iarr))
+				// ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
+				wg.Add(1)
+				go func(wg *sync.WaitGroup) {
+					defer wg.Done()
+					temp.Transactions, err = multiAddrEI(w, r, earr, iarr)
+					if err != nil {
+						return
+					}
+				}(&wg)
 
-		var wg sync.WaitGroup
-		var ret format.UtxoTxReturn
-		ret.Utxos = make([][]format.Utxo, len(earr)+len(iarr))
+				for i, elem := range arr {
+					// send the request out
+					wg.Add(1)
+					go utxoHelper(&wg, tempUtxos, i, elem)
+				}
 
-		wg.Add(1)
-		go func(wg *sync.WaitGroup) {
-			defer wg.Done()
-			ret.Transactions, err = multiAddrEI(w, r, earr, iarr)
-			if err != nil {
-				return
-			}
-		}(&wg)
-
-		for i, elem := range arr {
-			// send the request out
-			wg.Add(1)
-			go utxoHelper(&wg, ret.Utxos, i, elem)
+				wg.Wait()
+				// we have both utxos and txs now
+				for _, elem := range tempUtxos {
+					if len(elem) != 0 {
+						temp.Utxos = append(temp.Utxos, elem)
+					}
+				}
+				ret[key] = temp
+			}(&wg2, key, elem)
 		}
-
-		wg.Wait()
-		// we have both utxos and txs now
-
+		wg2.Wait()
 		erpc.MarshalSend(w, ret)
 	})
 }

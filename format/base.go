@@ -2,7 +2,6 @@ package format
 
 import (
 	"math"
-	"sort"
 )
 
 // RequestFormat is the format in which incoming requests hsould arrive for the wrapper to process
@@ -10,10 +9,13 @@ type RequestFormat struct {
 	Addresses []string `json:"addresses"`
 }
 
-type EIRequestFormat struct {
-	ExternalAddresses []string `json:"external"`
-	InternalAddresses []string `json:"internal"`
+type EIHelper struct {
+	ExternalAddresses []string `json:"External"`
+	InternalAddresses []string `json:"Internal"`
 }
+
+// EIRequestFormat is the return format used for the nutoxs endpoint
+type EIRequestFormat map[string]EIHelper
 
 // Balance is a copy of the struct esplora returns for balances
 type Balance struct {
@@ -102,8 +104,17 @@ type Tx struct {
 	SenderAddresses    []string
 	SentAmount         float64
 	ReceivedAmount     float64
-	Amount float64
+	Amount             float64
 	RecipientAddresses []string
+}
+
+func hunt(addresses []string, elem string) bool {
+	for _, address := range addresses {
+		if address == elem {
+			return true
+		}
+	}
+	return false
 }
 
 // Categorize does some nifty operations on the tx
@@ -121,7 +132,7 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		if len(address) == 0 {
 			continue
 		}
-		if sort.SearchStrings(InUseAddresses, address) != 0 {
+		if hunt(InUseAddresses, address) {
 			value -= input.PrevOut.Value
 			selfSenderList = append(selfSenderList, address)
 		} else {
@@ -134,9 +145,9 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		if len(address) == 0 {
 			continue
 		}
-		if sort.SearchStrings(InUseAddresses, address) != 0 {
+		if hunt(InUseAddresses, address) {
 			value += output.Value
-			if sort.SearchStrings(ExternalAddresses, address) != 0 {
+			if hunt(ExternalAddresses, address) {
 				amountToSelf += output.Value
 				selfRecipientList = append(selfRecipientList, address)
 			}
@@ -145,6 +156,7 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		}
 	}
 
+	// log.Println("VALUE: ", value, value+math.Abs(amountToSelf)+tx.Fee)
 	if value > 0 {
 		tx.TransactionType = "Received"
 		tx.SenderAddresses = probableSenderList
@@ -161,7 +173,9 @@ func (tx *Tx) Categorize(ExternalAddresses []string, InUseAddresses []string) {
 		}
 	}
 
-    tx.Amount = value;
+	tx.Amount = math.Abs(value)
+	tx.Vin = nil
+	tx.Vout = nil
 }
 
 // FeeResponse is a struct that is returned when a fee query is made
