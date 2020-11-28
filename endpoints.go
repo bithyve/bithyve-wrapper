@@ -75,7 +75,7 @@ func checkReq(w http.ResponseWriter, r *http.Request) ([]string, error) {
 }
 
 func checkReqEI(w http.ResponseWriter, r *http.Request) (format.EIRequestFormat, error) {
-	var earr, iarr []string
+	var earr, iarr, oarr []string
 	var rf format.EIRequestFormat
 	err := erpc.CheckPost(w, r)
 	if err != nil {
@@ -99,6 +99,7 @@ func checkReqEI(w http.ResponseWriter, r *http.Request) (format.EIRequestFormat,
 	for key, elem := range rf {
 		earr = elem.ExternalAddresses
 		iarr = elem.InternalAddresses
+		oarr = elem.OwnedAddresses
 		// filter through list to remove duplicates
 		nodupsMap1 := make(map[string]bool)
 		var nodups1 []string
@@ -120,12 +121,26 @@ func checkReqEI(w http.ResponseWriter, r *http.Request) (format.EIRequestFormat,
 				nodups2 = append(nodups2, elem)
 			}
 		}
+
+		nodupsMap3 := make(map[string]bool)
+		var nodups3 []string
+
+		for _, elem := range oarr {
+			if _, value := nodupsMap3[elem]; !value {
+				nodupsMap3[elem] = true
+				nodups3 = append(nodups3, elem)
+			}
+		}
+
 		var temp struct {
 			ExternalAddresses []string `json:"External"`
 			InternalAddresses []string `json:"Internal"`
+			OwnedAddresses    []string `json:"Owned"`
 		}
+
 		temp.ExternalAddresses = nodups1
 		temp.InternalAddresses = nodups2
+		temp.OwnedAddresses = nodups3
 		rf[key] = temp
 	}
 
@@ -190,7 +205,7 @@ func multiAddr(w http.ResponseWriter, r *http.Request,
 }
 
 func multiAddrEI(w http.ResponseWriter, r *http.Request,
-	earr, iarr []string) ([]format.MultigetAddrReturn, error) {
+	earr, iarr, oarr []string) ([]format.MultigetAddrReturn, error) {
 
 	var arr []string
 	arr = append(earr, iarr...)
@@ -238,7 +253,7 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 						wg6.Add(1)
 						go func(wg *sync.WaitGroup, x []format.MultigetAddrReturn, j int) {
 							defer wg.Done()
-							x[i].Transactions[j].Categorize(earr, append(earr, iarr...))
+							x[i].Transactions[j].Categorize(earr, oarr)
 						}(&wg6, x, j)
 					}
 					wg6.Wait()
@@ -396,6 +411,7 @@ func NewMultiUtxoTxs() {
 				var arr []string
 				iarr := elem.InternalAddresses
 				earr := elem.ExternalAddresses
+				oarr := elem.OwnedAddresses
 				arr = append(earr, iarr...)
 				var wg sync.WaitGroup
 				var err error
@@ -405,7 +421,7 @@ func NewMultiUtxoTxs() {
 				wg.Add(1)
 				go func(wg *sync.WaitGroup) {
 					defer wg.Done()
-					temp.Transactions, err = multiAddrEI(w, r, earr, iarr)
+					temp.Transactions, err = multiAddrEI(w, r, earr, iarr, oarr)
 					if err != nil {
 						return
 					}
