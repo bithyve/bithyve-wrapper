@@ -209,6 +209,9 @@ func multiAddrEI(w http.ResponseWriter, r *http.Request,
 
 	var arr []string
 	arr = append(earr, iarr...)
+	if len(oarr) == 0 {
+		oarr = append(earr, iarr...)
+	}
 
 	x := make([]format.MultigetAddrReturn, len(arr))
 	currentBh, err := electrs.CurrentBlockHeight()
