@@ -1,13 +1,28 @@
 package format
 
+import "sync"
+
 // UtxoTxReturn is the return structure used in /utxotxs
 type UtxoTxReturn struct {
 	Utxos        [][]Utxo             `json:"Utxos"`
 	Transactions []MultigetAddrReturn `json:"Txs"`
 }
 
+// EIUtxoReturnMap is a map helper
+type EIUtxoReturnMap map[string]UtxoTxReturn
+
 // EIUtxoReturn is the reutrn structure used in /nutxotxs
-type EIUtxoReturn map[string]UtxoTxReturn
+type EIUtxoReturn struct {
+	Ret map[string]UtxoTxReturn
+	mu  sync.Mutex
+}
+
+// Assign assigns key:elem in a map and locks mutex
+func (a *EIUtxoReturn) Assign(key string, elem UtxoTxReturn) {
+	a.mu.Lock()
+	a.Ret[key] = elem
+	a.mu.Unlock()
+}
 
 // BalTxReturn is a struct used for the baltxs endpoint
 type BalTxReturn struct {

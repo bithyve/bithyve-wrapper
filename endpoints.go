@@ -405,7 +405,8 @@ func NewMultiUtxoTxs() {
 			return
 		}
 
-		ret := make(format.EIUtxoReturn, len(rf))
+		var ret format.EIUtxoReturn
+		ret.Ret = make(format.EIUtxoReturnMap, len(rf))
 		var wg2 sync.WaitGroup
 		for key, elem := range rf {
 			wg2.Add(1)
@@ -443,11 +444,11 @@ func NewMultiUtxoTxs() {
 						temp.Utxos = append(temp.Utxos, elem)
 					}
 				}
-				ret[key] = temp
+				ret.Assign(key, temp)
 			}(&wg2, key, elem)
 		}
 		wg2.Wait()
-		erpc.MarshalSend(w, ret)
+		erpc.MarshalSend(w, ret.Ret)
 	})
 }
 
