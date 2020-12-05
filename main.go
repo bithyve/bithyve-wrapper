@@ -15,10 +15,12 @@ import (
 )
 
 var opts struct {
-	DevEnv  bool `short:"d" description:"Start dev env"`
-	Mainnet bool `short:"m" description:"Connect to mainnet"`
-	Test    bool `short:"t" description:"Use for testing"`
-	Logs    bool `short:"l" description:"Testing logs"`
+	DevEnv     bool   `short:"d" description:"Start dev env"`
+	Mainnet    bool   `short:"m" description:"Connect to mainnet"`
+	ElectrsURL string `short:"u" description:"Connect to your own electrs instance"`
+	BackupURL  string `short:"b" description:"Connect to your own backup electrs instance"`
+	Test       bool   `short:"t" description:"Use for testing"`
+	Logs       bool   `short:"l" description:"Testing logs"`
 }
 
 func startHandlers() {
@@ -62,6 +64,18 @@ func main() {
 	if opts.DevEnv {
 		log.Println("starting in devenv mode")
 		electrs.SetDevEnv()
+	}
+
+	if opts.ElectrsURL != "" {
+		if opts.BackupURL != "" {
+			electrs.SetURL(opts.ElectrsURL, opts.BackupURL)
+		} else {
+			if opts.Mainnet {
+				electrs.SetURL(opts.ElectrsURL, "https://api.bithyve.com")
+			} else {
+				electrs.SetURL(opts.ElectrsURL, "https://test-wrapper.bithyve.com")
+			}
+		}
 	}
 
 	if opts.Test {
