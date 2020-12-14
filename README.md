@@ -12,4 +12,14 @@ sudo tar -xvf go1.15.4.linux-amd64.tar.gz
 sudo mv go /usr/bin/
 ```
 
-2. `go install github.com/bithyve/bithyve-wrapper`
+2. Update paths
+
+```
+export GOROOT=/usr/bin/go
+export GOPATH=$HOME/go
+export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+```
+
+3. Download and install wrapper
+
+`go install github.com/bithyve/bithyve-wrapper`
