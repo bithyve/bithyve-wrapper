@@ -12,7 +12,7 @@ sudo tar -xvf go1.15.4.linux-amd64.tar.gz
 sudo mv go /usr/bin/
 ```
 
-2. Update paths
+2. Update path
 
 ```
 export GOROOT=/usr/bin/go
