@@ -11,7 +11,7 @@ import (
 )
 
 // ElectrsURL is the URL of a running electrs instance
-var ElectrsURL = "http://testapi.bithyve.com"
+var ElectrsURL = "http://test-wrapper.bithyve.com"
 
 // FallbackURL is the URL of a fallback electrs instance
 var FallbackURL = "https://blockstream.info/testnet/api"

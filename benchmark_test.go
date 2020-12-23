@@ -12,7 +12,7 @@ import (
 // the new endpoint should be at /new so we can compare benchmarks directly without
 // having to run both separately
 
-var APIURL = "https://testapi.bithyve.com"
+var APIURL = "https://test-wrapper.bithyve.com"
 
 func postRoutine(url string, inputx string) {
 	input := []byte(inputx)
