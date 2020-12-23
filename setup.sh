@@ -5,8 +5,8 @@ sudo apt-get update
 sudo apt-get -y upgrade
 sudo apt-get install build-essential
 
-wget https://dl.google.com/go/go1.14.1.linux-amd64.tar.gz
-sudo tar -xvf go1.14.1.linux-amd64.tar.gz
+wget https://dl.google.com/go/go1.15.4.linux-amd64.tar.gz
+sudo tar -xvf go1.15.4.linux-amd64.tar.gz
 sudo mv go /usr/bin/
 
 export GOROOT=/usr/bin/go
@@ -34,6 +34,10 @@ sudo apt-get install libclang-dev
 sudo apt-get install clang
 sudo apt-get install librocksdb-sys # or librocksdb-dev
 cargo build
+
+# run as sudo
+ulimit -n 50000
+
 # screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir /home/ubuntu/.bitcoin --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
 sudo screen -SL indexer ./target/release/electrs -vvvv --daemon-dir /home/ubuntu/.bitcoin --daemon-rpc-addr 127.0.0.1:8332 --cors 0.0.0.0/0 --network mainnet --bulk-index-threads 4 --index-batch-size 1000 --tx-cache-size 1000000
 
