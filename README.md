@@ -22,4 +22,8 @@ export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
 
 3. Download and install wrapper
 
-`go install github.com/bithyve/bithyve-wrapper`
+```
+git clone https://github.com/bithyve/bithyve-wrapper.git && cd bithyve-wrapper
+go install github.com/bithyve/bithyve-wrapper && go build
+sudo ./BitHyve-wrapper -t
+```
