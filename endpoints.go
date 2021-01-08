@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -578,7 +580,7 @@ func GetFeesE(mainnet bool) {
 // PostTx posts a transaction to the blockchain
 func PostTx() {
 	http.HandleFunc("/tx", func(w http.ResponseWriter, r *http.Request) {
-		// validate if the person requesting this is a vlaid user on the platform
+		// validate if the person requesting this is a valid user on the platform
 		err := erpc.CheckPost(w, r) // check origin of request as well if needed
 		if err != nil {
 			log.Println(err)
@@ -598,4 +600,32 @@ func PostTx() {
 		}
 		erpc.MarshalSend(w, x)
 	})
+}
+
+func hunt(addresses []string, elem string) bool {
+	for _, address := range addresses {
+		if address == elem {
+			return true
+		}
+	}
+	return false
+}
+
+// OFACScan returns true if the address is found in the list of OFAC Sanctioned addresses
+func OFACScan(addr string) bool {
+	f, err := os.Open("ofac.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	var banList []string
+	for scanner.Scan() {
+		line := scanner.Text()
+		if string(line[0]) != "#" {
+			banList = append(banList, line)
+		}
+	}
+
+	return hunt(banList, addr)
 }

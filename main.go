@@ -42,9 +42,9 @@ func startHandlers() {
 
 func main() {
 
-	log.Println("wrapper is running on: ", runtime.NumCPU(), " cores")
+	var err error
 	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
-	_, err := flags.ParseArgs(&opts, os.Args)
+	_, err = flags.ParseArgs(&opts, os.Args)
 	if err != nil {
 		log.Fatal(err)
 	}
