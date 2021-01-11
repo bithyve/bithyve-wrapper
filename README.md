@@ -2,7 +2,7 @@
 
 BitHyve wrapper is a server instance that wraps around [electrs](https://github.com/Blockstream/electrs) to provide some additional functionality on top of electrs as required by [hexa](https://github.com/bithyve/hexa)
 
-## Prerequisites for running BitHyve Wrappe
+## Prerequisites for running BitHyve Wrapper
 
 BitHyve Wrapper requires **electrs** (https://github.com/Blockstream/electrs) and electrs requires a **Bitcoin Core** (v0.16+)
 
