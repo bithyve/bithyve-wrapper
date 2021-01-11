@@ -47,7 +47,7 @@ go build
 
 4. Run the wrapper
    - Before running the wrapper please ensure that Bitcoin Core daemon and electrs have been setup and and are running as these are required for BitHyve Wrapper.
-   - You would need to know the ip number of the machine/server runnig the BitHyand port number where you are running 
+   - You would need to know the ip number of the machine/server runnig the BitHye Wrapper and port number
 
 ```
 sudo screen -SL wrapper ./bithyve-wrapper -m
