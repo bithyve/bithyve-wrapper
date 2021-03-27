@@ -599,3 +599,25 @@ func PostTx() {
 		erpc.MarshalSend(w, x)
 	})
 }
+
+// NetworkReturn is a simple struct that is used as helper to return network config
+type NetworkReturn struct {
+	Network string
+}
+
+// GetNetwork checks which network the wrapper is running on
+func GetNetwork(mainnet bool) {
+	http.HandleFunc("/network", func(w http.ResponseWriter, r *http.Request) {
+		err := erpc.CheckGet(w, r)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		var x NetworkReturn
+		x.Network = "Testnet"
+		if mainnet {
+			x.Network = "Mainnet"
+		}
+		erpc.MarshalSend(w, x)
+	})
+}
