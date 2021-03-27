@@ -38,6 +38,7 @@ func startHandlers() {
 	PostTx()
 	RelayTxid()
 	RelayGetRequest()
+	GetNetwork(opts.Mainnet)
 }
 
 func main() {
