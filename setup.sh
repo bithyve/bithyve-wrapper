@@ -24,21 +24,24 @@ cd bitcoin-0.20.1/bin
 sudo mv bitcoind /usr/local/ # or wherever you would like to have bitcoind
 sudo mv bitcoin-cli /usr/locals
 # bitcoind -daemon -testnet # start bitcoind on testnet or mainnet
-sudo screen -SL btc bitcoind -server=1 -txindex=0 -prune=0
+# sudo screen -SL btc
+bitcoind -server=1 -txindex=0 -prune=0 -daemon
 
 # Clone, build and run electrs
+cd ~/
 git clone -b new-index https://github.com/Blockstream/electrs.git
-cd electrs
+cd ~/electrs
 sudo apt-get install gcc
 sudo apt-get install libclang-dev
 sudo apt-get install clang
 sudo apt-get install librocksdb-sys # or librocksdb-dev
+
 cargo build
 
 # run as sudo
 ulimit -n 50000
 
-# screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir /home/ubuntu/.bitcoin --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
+# screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir /home/ubuntu/.bitcoin/testnet3 --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
 sudo screen -SL indexer ./target/release/electrs -vvvv --daemon-dir /home/ubuntu/.bitcoin --daemon-rpc-addr 127.0.0.1:8332 --cors 0.0.0.0/0 --network mainnet --bulk-index-threads 4 --index-batch-size 1000 --tx-cache-size 1000000
 
 go get github.com/bithyve/bithyve-wrapper
@@ -55,5 +58,9 @@ go get ./...
 go build
 sudo screen -SL wrapper ./bithyve-wrapper -m
 
-sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001
+# testnet sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001
+sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3000
 sudo screen -SL socat443 socat tcp-listen:443,reuseaddr,fork tcp:localhost:445
+
+# list all listening ports
+sudo lsof -i -P -n | grep LISTEN
