@@ -43,6 +43,7 @@ ulimit -n 50000
 
 # screen -SL electrs cargo run --release --bin electrs -- -vvvv --daemon-dir /home/ubuntu/.bitcoin/testnet3 --daemon-rpc-addr 127.0.0.1:18332 --network testnet --cors 0.0.0.0/0
 sudo screen -SL indexer ./target/release/electrs -vvvv --daemon-dir /home/ubuntu/.bitcoin --daemon-rpc-addr 127.0.0.1:8332 --cors 0.0.0.0/0 --network mainnet --bulk-index-threads 4 --index-batch-size 1000 --tx-cache-size 1000000
+#Press cntrl+A+D to detach from the screenlog and move on to next step.
 
 go get github.com/bithyve/bithyve-wrapper
 cd ~/go/src/github.com/bithyve/bithyve-wrapper
@@ -57,10 +58,13 @@ cd ~/go/src/github.com/bithyve/bithyve-wrapper
 go get ./...
 go build
 sudo screen -SL wrapper ./bithyve-wrapper -m
+#Press cntrl+A+D to detach from the screenlog and move on to next step.
 
 # testnet sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3001
 sudo screen -SL socat80 socat tcp-listen:80,reuseaddr,fork tcp:localhost:3000
+#Press cntrl+A+D to detach from the screenlog and move on to next step.
 sudo screen -SL socat443 socat tcp-listen:443,reuseaddr,fork tcp:localhost:445
+#Press cntrl+A+D to detach from the screenlog and move on to next step.
 
 # list all listening ports
 sudo lsof -i -P -n | grep LISTEN
